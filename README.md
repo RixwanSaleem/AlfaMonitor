@@ -38,6 +38,9 @@ AlfaMonitor includes a centralized dashboard to monitor server CPU, RAM, disk, t
 ## Project Structure
 
 ```text
+## Project Structure
+
+```text
 .
 ├── LICENSE
 ├── README.md
@@ -63,6 +66,8 @@ AlfaMonitor includes a centralized dashboard to monitor server CPU, RAM, disk, t
 ├── static
 │   ├── agent_install_instructions.txt
 │   ├── agent_service.template
+│   ├── windows_agent_build.ps1
+│   ├── windows_agent_service.ps1
 │   ├── css
 │   │   └── style.css
 │   └── js
@@ -70,6 +75,7 @@ AlfaMonitor includes a centralized dashboard to monitor server CPU, RAM, disk, t
 └── templates
     ├── dashboard.html
     └── login.html
+```
 ```
 
 ## Prerequisites
