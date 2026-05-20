@@ -114,7 +114,7 @@ sudo yum install -y python3 python3-devel python3-virtualenv python3-pip gcc ope
 1. Clone the repository:
 
 ```bash
-git clone https://github.com/yourusername/AlfaMonitor.git
+git clone https://github.com/Rixwansaleem/AlfaMonitor.git
 cd AlfaMonitor
 ```
 
