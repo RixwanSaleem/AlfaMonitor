@@ -70,3 +70,28 @@ class NotificationSetting(Base):
     key = Column(String(128), unique=True, nullable=False)
     value = Column(Text, nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SoftwareTemplate(Base):
+    __tablename__ = "software_templates"
+    id = Column(Integer, primary_key=True)
+    name = Column(String(128), nullable=False, unique=True)
+    package_name = Column(String(256), nullable=False)
+    description = Column(Text, nullable=True)
+    category = Column(String(64), default="utility")
+    version = Column(String(64), nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class SoftwareInstallation(Base):
+    __tablename__ = "software_installations"
+    id = Column(Integer, primary_key=True)
+    server_ids = Column(Text, nullable=False)
+    package_name = Column(String(256), nullable=False)
+    package_version = Column(String(64), nullable=True)
+    status = Column(String(32), default="pending")
+    output = Column(Text, nullable=True)
+    error = Column(Text, nullable=True)
+    return_code = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)

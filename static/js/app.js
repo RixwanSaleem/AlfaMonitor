@@ -747,3 +747,131 @@ async function loadLiveMetrics() {
     console.error('Failed to load live metrics', err);
   }
 }
+
+async function loadSoftwareTemplates() {
+  try {
+    const response = await fetch('/api/software/templates');
+    const templates = await response.json();
+    const container = document.getElementById('software-templates-list');
+    if (!container) return;
+
+    if (templates.length === 0) {
+      container.innerHTML = '<div style="text-align:center; color:#8b949e;">No templates available</div>';
+      return;
+    }
+
+    container.innerHTML = templates.map(t => `
+      <button 
+        class="control-btn" 
+        style="background:#38bdf8; padding:6px 10px; font-size:0.8rem; text-align:left; cursor:pointer;"
+        onclick="quickInstallTemplate('${t.package_name}', '${t.name}')"
+        title="${t.description || ''}"
+      >
+        ${t.name} ${t.version ? `v${t.version}` : ''}
+      </button>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load software templates', err);
+  }
+}
+
+async function loadSoftwareHistory() {
+  try {
+    const response = await fetch('/api/software/history');
+    const history = await response.json();
+    const container = document.getElementById('software-history-list');
+    if (!container) return;
+
+    if (history.length === 0) {
+      container.innerHTML = '<div style="text-align:center; color:#8b949e;">No history yet</div>';
+      return;
+    }
+
+    container.innerHTML = history.slice(0, 8).map(h => `
+      <div style="padding:6px; background:rgba(255,255,255,0.04); border-radius:6px; color:#cbd5e1;">
+        <div style="font-weight:600; font-size:0.85rem;">${h.package_name} ${h.package_version ? `v${h.package_version}` : ''}</div>
+        <div style="font-size:0.75rem; color:#8b949e;">
+          <span style="color:${h.status === 'success' ? '#22c55e' : h.status === 'failed' ? '#ef4444' : '#f59e0b'}">${h.status.toUpperCase()}</span>
+          · ${new Date(h.created_at).toLocaleString()}
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load software history', err);
+  }
+}
+
+async function installPackage(packageName, packageVersion = null) {
+  const selectedServers = Array.from(document.querySelectorAll('.server-select:checked')).map(cb => parseInt(cb.value));
+  
+  if (selectedServers.length === 0) {
+    alert('Please select at least one server');
+    return;
+  }
+
+  if (!packageName.trim()) {
+    alert('Please enter a package name');
+    return;
+  }
+
+  try {
+    const response = await fetch('/api/software/install', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        server_ids: selectedServers,
+        package_name: packageName.trim(),
+        package_version: packageVersion ? packageVersion.trim() : null
+      })
+    });
+
+    const data = await response.json();
+    if (response.ok) {
+      alert(`Installation started for ${packageName}`);
+      document.getElementById('software-package-input').value = '';
+      document.getElementById('software-version-input').value = '';
+      setTimeout(() => {
+        loadSoftwareHistory();
+      }, 1000);
+    } else {
+      alert(`Error: ${data.error}`);
+    }
+  } catch (err) {
+    console.error('Failed to install package', err);
+    alert('Failed to install package');
+  }
+}
+
+function quickInstallTemplate(packageName, templateName) {
+  const selectedServers = Array.from(document.querySelectorAll('.server-select:checked')).map(cb => parseInt(cb.value));
+  
+  if (selectedServers.length === 0) {
+    alert('Please select at least one server');
+    return;
+  }
+
+  if (confirm(`Install ${templateName}?`)) {
+    installPackage(packageName, null);
+  }
+}
+
+document.addEventListener('DOMContentLoaded', function() {
+  const installBtn = document.getElementById('install-package-btn');
+  if (installBtn) {
+    installBtn.addEventListener('click', function() {
+      const packageName = document.getElementById('software-package-input').value;
+      const packageVersion = document.getElementById('software-version-input').value;
+      installPackage(packageName, packageVersion);
+    });
+  }
+
+  const refreshBtn = document.getElementById('refresh-software-templates');
+  if (refreshBtn) {
+    refreshBtn.addEventListener('click', loadSoftwareTemplates);
+  }
+
+  loadSoftwareTemplates();
+  loadSoftwareHistory();
+
+  setInterval(loadSoftwareHistory, 10000);
+});

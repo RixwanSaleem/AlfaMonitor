@@ -1479,6 +1479,7 @@
             <div class="tab-buttons" id="dashboard-tab-buttons">
               <button class="tab-btn active" data-tab="servers">Servers</button>
               <button class="tab-btn" data-tab="alerts">Alerts</button>
+              <button class="tab-btn" data-tab="software">Software</button>
               <button class="tab-btn" data-tab="history">History</button>
               <button class="tab-btn" data-tab="notify">Notify</button>
               <button class="tab-btn" data-tab="users">Users</button>
@@ -1541,6 +1542,36 @@
               </div>
               <div id="alerts-list" class="tab-panel-scroll">
                 <div class="alert-item" style="text-align:center;">No active alerts</div>
+              </div>
+            </div>
+
+            <div class="tab-pane" id="tab-software">
+              <div class="section-toolbar">
+                <h3>Software Install</h3>
+                <button id="refresh-software-templates" class="control-btn" style="padding:6px 10px; font-size:0.85rem;">Refresh</button>
+              </div>
+              <div style="display:grid; gap:12px; font-size:0.9rem;">
+                <div>
+                  <label style="display:block; margin-bottom:6px; color:#8b949e; font-size:0.82rem;">Package Name</label>
+                  <input id="software-package-input" placeholder="e.g., 7zip, git, nodejs" style="padding:8px; font-size:0.85rem;" />
+                </div>
+                <div>
+                  <label style="display:block; margin-bottom:6px; color:#8b949e; font-size:0.82rem;">Version (optional)</label>
+                  <input id="software-version-input" placeholder="e.g., 18.0.0" style="padding:8px; font-size:0.85rem;" />
+                </div>
+                <button id="install-package-btn" class="control-btn" style="background:#2f80ed; padding:8px 12px; font-size:0.9rem;">Install Package</button>
+              </div>
+              <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+                <h4 style="margin:0 0 8px 0; color:#f8fafd; font-size:0.9rem;">Popular Packages</h4>
+                <div id="software-templates-list" style="display:grid; gap:6px; max-height:180px; overflow-y:auto;">
+                  <div style="text-align:center; color:#8b949e; font-size:0.85rem;">Loading templates...</div>
+                </div>
+              </div>
+              <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+                <h4 style="margin:0 0 8px 0; color:#f8fafd; font-size:0.9rem;">Recent Installations</h4>
+                <div id="software-history-list" style="display:grid; gap:6px; max-height:150px; overflow-y:auto; font-size:0.8rem;">
+                  <div style="text-align:center; color:#8b949e;">No history yet</div>
+                </div>
               </div>
             </div>
 

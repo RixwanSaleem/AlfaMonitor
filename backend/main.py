@@ -7,15 +7,49 @@ from datetime import datetime
 from flask import Flask, flash, redirect, render_template, request, session, url_for, jsonify, send_file
 from flask_socketio import emit
 from backend.database import engine, SessionLocal
-from backend.models import Base, Server, Metric, Alert, PlaybookExecution
+from backend.models import Base, Server, Metric, Alert, PlaybookExecution, SoftwareInstallation, SoftwareTemplate
 from backend.auth import authenticate, login_required, create_admin_user
 from backend.alerting import send_alert, send_telegram, get_setting
 from backend.ansible_manager import run_playbook, run_command
+from backend.package_manager import install_package, uninstall_package, list_installed_packages, chocolatey_installed
 from backend.crypto import encrypt_text, decrypt_text
 from backend.websocket import socketio
 
 Base.metadata.create_all(bind=engine)
 
+
+def initialize_software_templates():
+    """Initialize default software templates if they don't exist."""
+    db = SessionLocal()
+    try:
+        existing_count = db.query(SoftwareTemplate).count()
+        if existing_count > 0:
+            return
+        
+        templates = [
+            SoftwareTemplate(name="7-Zip", package_name="7zip", description="File archiver", category="utility", version="23.01"),
+            SoftwareTemplate(name="Git", package_name="git", description="Version control system", category="development", version="2.41.0"),
+            SoftwareTemplate(name="Node.js", package_name="nodejs", description="JavaScript runtime", category="development", version="18.16.1"),
+            SoftwareTemplate(name="Python 3", package_name="python3", description="Python programming language", category="development", version="3.11.4"),
+            SoftwareTemplate(name=".NET Runtime", package_name="dotnetcore-runtime", description=".NET runtime environment", category="development", version="7.0"),
+            SoftwareTemplate(name="Visual Studio Code", package_name="vscode", description="Code editor", category="development", version="1.81.1"),
+            SoftwareTemplate(name="Docker Desktop", package_name="docker-desktop", description="Container platform", category="infrastructure", version="4.21.1"),
+            SoftwareTemplate(name="OpenVPN", package_name="openvpn", description="VPN client", category="network", version="2.6.4"),
+            SoftwareTemplate(name="PuTTY", package_name="putty", description="SSH client", category="network", version="0.78"),
+            SoftwareTemplate(name="Notepad++", package_name="notepadplusplus", description="Text editor", category="utility", version="8.5.3"),
+            SoftwareTemplate(name="WinRAR", package_name="winrar", description="Archive tool", category="utility", version="6.22"),
+            SoftwareTemplate(name="VLC Media Player", package_name="vlc", description="Media player", category="multimedia", version="3.0.18"),
+        ]
+        
+        for template in templates:
+            db.add(template)
+        
+        db.commit()
+        print("✓ Software templates initialized")
+    except Exception as e:
+        print(f"⚠ Failed to initialize software templates: {e}")
+    finally:
+        db.close()
 
 def parse_bool(value):
     if isinstance(value, str):
@@ -116,7 +150,7 @@ def start_periodic_status_worker():
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "password")
 create_admin_user(ADMIN_USER, ADMIN_PASSWORD)
-
+initialize_software_templates()
 
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -668,6 +702,173 @@ def api_delete_user(user_id):
     db.commit()
     db.close()
     return jsonify({'message': 'deleted'})
+
+
+@app.route('/api/software/templates', methods=['GET'])
+@login_required
+def api_software_templates():
+    db = SessionLocal()
+    templates = db.query(SoftwareTemplate).all()
+    payload = [
+        {
+            "id": t.id,
+            "name": t.name,
+            "package_name": t.package_name,
+            "description": t.description,
+            "category": t.category,
+            "version": t.version,
+        }
+        for t in templates
+    ]
+    db.close()
+    return jsonify(payload)
+
+
+@app.route('/api/software/install', methods=['POST'])
+@login_required
+def api_software_install():
+    body = request.json or {}
+    server_ids = body.get('server_ids', [])
+    package_name = (body.get('package_name') or '').strip()
+    package_version = (body.get('package_version') or '').strip()
+
+    if not package_name:
+        return jsonify({"error": "Package name is required"}), 400
+
+    db = SessionLocal()
+    if server_ids:
+        servers = db.query(Server).filter(Server.id.in_(server_ids)).all()
+    else:
+        servers = db.query(Server).filter(Server.enabled == True).all()
+
+    if not servers:
+        db.close()
+        return jsonify({"error": "No servers selected or enabled"}), 400
+
+    server_records = [
+        {
+            "id": s.id,
+            "name": s.name,
+            "host": s.host,
+            "username": s.username,
+            "password": s.password,
+            "port": s.port,
+        }
+        for s in servers
+    ]
+
+    installation = SoftwareInstallation(
+        server_ids=json.dumps([s["id"] for s in server_records]),
+        package_name=package_name,
+        package_version=package_version if package_version else None,
+        status="running"
+    )
+    db.add(installation)
+    db.commit()
+    install_id = installation.id
+    db.close()
+
+    def run_installation():
+        try:
+            result = install_package(server_records, package_name, package_version if package_version else None)
+        except Exception as exc:
+            result = {"returncode": 1, "stdout": "", "stderr": str(exc), "error": str(exc)}
+
+        db = SessionLocal()
+        installation = db.query(SoftwareInstallation).filter(SoftwareInstallation.id == install_id).first()
+        if installation:
+            installation.status = "success" if result.get("returncode") == 0 else "failed"
+            installation.return_code = result.get("returncode")
+            installation.output = result.get("stdout", "")
+            installation.error = result.get("stderr", "") or result.get("error", "")
+            installation.completed_at = datetime.utcnow()
+            db.add(installation)
+            db.commit()
+        db.close()
+
+        socketio.emit('software_installation_complete', {
+            'id': install_id,
+            'status': installation.status if installation else 'failed',
+            'package': package_name,
+        }, namespace='/')
+
+    thread = threading.Thread(target=run_installation, daemon=True)
+    thread.start()
+
+    return jsonify({"id": install_id, "status": "running", "message": f"Installing {package_name}..."})
+
+
+@app.route('/api/software/status/<int:job_id>', methods=['GET'])
+@login_required
+def api_software_status(job_id):
+    db = SessionLocal()
+    installation = db.query(SoftwareInstallation).filter(SoftwareInstallation.id == job_id).first()
+    if not installation:
+        db.close()
+        return jsonify({"error": "Installation job not found"}), 404
+
+    payload = {
+        "id": installation.id,
+        "package_name": installation.package_name,
+        "status": installation.status,
+        "output": installation.output,
+        "error": installation.error,
+        "return_code": installation.return_code,
+        "created_at": installation.created_at.isoformat() if installation.created_at else None,
+        "completed_at": installation.completed_at.isoformat() if installation.completed_at else None,
+    }
+    db.close()
+    return jsonify(payload)
+
+
+@app.route('/api/software/history', methods=['GET'])
+@login_required
+def api_software_history():
+    db = SessionLocal()
+    installations = db.query(SoftwareInstallation).order_by(SoftwareInstallation.created_at.desc()).limit(50).all()
+    payload = [
+        {
+            "id": i.id,
+            "package_name": i.package_name,
+            "package_version": i.package_version,
+            "status": i.status,
+            "created_at": i.created_at.isoformat() if i.created_at else None,
+            "completed_at": i.completed_at.isoformat() if i.completed_at else None,
+        }
+        for i in installations
+    ]
+    db.close()
+    return jsonify(payload)
+
+
+@app.route('/api/software/installed/<int:server_id>', methods=['GET'])
+@login_required
+def api_software_installed(server_id):
+    db = SessionLocal()
+    server = db.query(Server).filter(Server.id == server_id).first()
+    if not server:
+        db.close()
+        return jsonify({"error": "Server not found"}), 404
+
+    server_record = {
+        "id": server.id,
+        "name": server.name,
+        "host": server.host,
+        "username": server.username,
+        "password": server.password,
+        "port": server.port,
+    }
+
+    result = list_installed_packages([server_record])
+    db.close()
+
+    return jsonify({
+        "server_id": server_id,
+        "server_name": server.name,
+        "packages": result.get("stdout", ""),
+        "error": result.get("error", ""),
+        "returncode": result.get("returncode"),
+    })
 
 
 if __name__ == "__main__":
