@@ -1,0 +1,13 @@
+[Unit]
+Description=Monitoring Agent
+After=network.target
+
+[Service]
+Type=simple
+User=root
+WorkingDirectory=/opt/monitoring-agent
+ExecStart=/usr/bin/python3 /opt/monitoring-agent/agent.py --host %H --username agent --port 22
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target

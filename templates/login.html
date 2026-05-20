@@ -1,0 +1,182 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Admin Login - AlfaMonitor</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <style>
+    :root {
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color-scheme: dark;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    html, body {
+      min-height: 100vh;
+      background: radial-gradient(circle at top, rgba(39, 120, 255, 0.22), transparent 35%),
+                  linear-gradient(180deg, #050b19 0%, #0f1b36 100%);
+      color: #f8fafd;
+    }
+
+    body {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 1rem;
+    }
+
+    .login-panel {
+      width: 100%;
+      max-width: 420px;
+      background: rgba(12, 24, 52, 0.88);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 20px;
+      padding: 2.5rem;
+      backdrop-filter: blur(18px);
+      box-shadow: 0 30px 90px rgba(0,0,0,0.35);
+    }
+
+    .login-panel h1 {
+      margin-bottom: 0.5rem;
+      font-size: 2rem;
+      font-weight: 700;
+      letter-spacing: -0.01em;
+    }
+
+    .login-tagline {
+      color: rgba(248, 250, 253, 0.6);
+      font-size: 0.9rem;
+      margin-bottom: 2rem;
+      letter-spacing: 0.02em;
+    }
+
+    .flash-messages {
+      margin-bottom: 1.5rem;
+    }
+
+    .flash {
+      padding: 0.9rem 1rem;
+      border-radius: 12px;
+      font-size: 0.9rem;
+      line-height: 1.5;
+    }
+
+    .flash.danger {
+      background: rgba(255, 45, 85, 0.15);
+      border: 1px solid rgba(255, 99, 132, 0.3);
+      color: #ffccd5;
+    }
+
+    .login-form {
+      display: grid;
+      gap: 1rem;
+    }
+
+    .form-group {
+      display: grid;
+      gap: 0.4rem;
+    }
+
+    label {
+      font-size: 0.85rem;
+      font-weight: 600;
+      color: rgba(248, 250, 253, 0.8);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    input {
+      padding: 0.9rem 1rem;
+      border-radius: 12px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.06);
+      color: #f8fafd;
+      font-size: 0.95rem;
+      transition: all 0.2s ease;
+    }
+
+    input:focus {
+      outline: none;
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(255,255,255,0.2);
+      box-shadow: 0 0 12px rgba(47, 128, 237, 0.2);
+    }
+
+    input::placeholder {
+      color: rgba(248, 250, 253, 0.4);
+    }
+
+    button {
+      padding: 1rem;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #2f80ed 0%, #1e5fc3 100%);
+      color: #fff;
+      font-weight: 700;
+      font-size: 0.95rem;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      margin-top: 0.5rem;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 12px 24px rgba(47, 128, 237, 0.25);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .login-note {
+      margin-top: 1.5rem;
+      font-size: 0.85rem;
+      color: rgba(248, 250, 253, 0.5);
+      text-align: center;
+      line-height: 1.6;
+    }
+
+    .login-note strong {
+      color: rgba(248, 250, 253, 0.7);
+      font-weight: 600;
+    }
+  </style>
+</head>
+<body>
+  <div class="login-panel">
+    <h1>AlfaMonitor</h1>
+    <p class="login-tagline">Server Monitoring & Control Dashboard</p>
+    
+    {% with messages = get_flashed_messages(with_categories=true) %}
+      {% if messages %}
+        <div class="flash-messages">
+          {% for category, message in messages %}
+            <div class="flash {{ category }}">{{ message }}</div>
+          {% endfor %}
+        </div>
+      {% endif %}
+    {% endwith %}
+
+    <form method="post" class="login-form">
+      <div class="form-group">
+        <label for="username">Username</label>
+        <input type="text" id="username" name="username" required autocomplete="username" />
+      </div>
+      <div class="form-group">
+        <label for="password">Password</label>
+        <input type="password" id="password" name="password" required autocomplete="current-password" />
+      </div>
+      <button type="submit">Sign In</button>
+    </form>
+
+    <p class="login-note">
+      Lightweight real-time server monitoring and management platform
+    </p>
+  </div>
+</body>
+</html>

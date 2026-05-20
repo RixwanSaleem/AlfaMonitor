@@ -1,0 +1,1627 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>AlfaMonitor - Dashboard</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/socket.io/4.7.2/socket.io.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #0d1117;
+      color: #c9d1d9;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top, rgba(39, 120, 255, 0.22), transparent 35%),
+                  linear-gradient(180deg, #050b19 0%, #0f1b36 100%);
+    }
+
+    body {
+      color: #c9d1d9;
+      overflow-x: hidden;
+    }
+
+    a {
+      color: #58a6ff;
+      text-decoration: none;
+    }
+
+    .dashboard-shell {
+      width: min(100%, 100vw);
+      max-width: 100vw;
+      margin: 0;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: visible;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      border-radius: 14px;
+      background: rgba(255,255,255,0.06);
+      border: 1px solid rgba(255,255,255,0.08);
+      box-shadow: 0 8px 24px rgba(0,0,0,0.15);
+      margin-bottom: 0.75rem;
+      gap: 12px;
+      flex-shrink: 0;
+    }
+
+    .brand {
+      font-size: 2.4rem;
+      letter-spacing: 0.22em;
+      font-weight: 800;
+      color: #f8fafd;
+      text-transform: uppercase;
+    }
+
+    .user-tools {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      color: #8b949e;
+      font-size: 0.92rem;
+    }
+
+    .user-tools a {
+      color: #58a6ff;
+    }
+
+    .topbar-meta {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 12px;
+      padding: 1rem 1.1rem;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      margin-bottom: 0.75rem;
+      align-items: center;
+      min-height: auto;
+    }
+
+    .meta-item {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      color: #8b949e;
+      font-size: 0.85rem;
+    }
+
+    .meta-item strong {
+      color: #f8fafd;
+      font-size: 0.96rem;
+      font-weight: 600;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 12px;
+      border-radius: 999px;
+      background: rgba(88, 166, 255, 0.12);
+      color: #58a6ff;
+      border: 1px solid rgba(88, 166, 255, 0.28);
+      font-size: 0.84rem;
+      font-weight: 600;
+      min-width: 120px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(320px, 1.9fr) minmax(280px, 1fr);
+      gap: 18px;
+      min-height: auto;
+      max-height: none;
+      width: 100%;
+    }
+
+    .dashboard-column--main,
+    .dashboard-column--side {
+      display: grid;
+      gap: 18px;
+      min-height: 0;
+      min-width: 0;
+    }
+
+    .section-panel {
+      min-width: 0;
+    }
+
+    .tab-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.45rem;
+      justify-content: flex-end;
+    }
+
+    .tab-btn {
+      flex: 1 1 auto;
+      min-width: 92px;
+      padding: 0.55rem 0.85rem;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.05);
+      color: #fff;
+      cursor: pointer;
+      font-size: 0.82rem;
+      transition: background 0.2s ease, border-color 0.2s ease;
+      white-space: normal;
+      text-align: center;
+    }
+
+    .tab-content {
+      flex: 1;
+      min-height: 0;
+      min-width: 0;
+      display: flex;
+      flex-direction: column;
+    }
+
+    .tab-pane {
+      display: none;
+      min-height: 0;
+      overflow: auto;
+      padding-right: 0.3rem;
+      min-width: 0;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .command-output {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px;
+      color: #c9d1d9;
+      font-family: Menlo, Monaco, Consolas, monospace;
+      font-size: 0.85rem;
+      white-space: pre-wrap;
+      max-height: 260px;
+      overflow-y: auto;
+    }
+
+    .section-panel {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 0;
+      overflow: visible;
+      backdrop-filter: blur(10px);
+    }
+
+    .section-header {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items: flex-start;
+    }
+
+    .section-header h2,
+    .section-header h3,
+    .section-header h4 {
+      margin: 0;
+      color: #f8fafd;
+      font-weight: 700;
+    }
+
+    .section-header p,
+    .section-header small {
+      margin: 0;
+      color: #8b949e;
+      font-size: 0.9rem;
+      line-height: 1.4;
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+      gap: 12px;
+      width: 100%;
+    }
+
+    .metric-card {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 14px;
+      display: grid;
+      gap: 12px;
+      min-height: 130px;
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+      position: relative;
+      min-width: 0;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-1px);
+      border-color: #58a6ff;
+      background: rgba(88,166,255,0.08);
+    }
+
+    .metric-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: #8b949e;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.76rem;
+    }
+
+    .metric-value {
+      font-size: 1.55rem;
+      font-weight: 700;
+      color: #f8fafd;
+    }
+
+    .metric-summary {
+      width: 100%;
+      padding: 12px 14px;
+      border-radius: 14px;
+      background: rgba(56, 189, 248, 0.08);
+      border: 1px solid rgba(56, 189, 248, 0.16);
+      color: #c9d1d9;
+      font-size: 0.92rem;
+    }
+
+    .metric-detail {
+      display: grid;
+      gap: 10px;
+    }
+
+    .progress-label,
+    .metric-line {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      color: #94a3b8;
+      font-size: 0.85rem;
+      align-items: center;
+    }
+
+    .progress-track {
+      width: 100%;
+      height: 10px;
+      border-radius: 999px;
+      background: rgba(255,255,255,0.08);
+      overflow: hidden;
+    }
+
+    .progress-fill {
+      width: 0%;
+      min-height: 100%;
+      border-radius: inherit;
+      background: #58a6ff;
+      transition: width 220ms ease, background-color 220ms ease;
+    }
+
+    .metric-card.cpu .progress-fill { background: #38bdf8; }
+    .metric-card.ram .progress-fill { background: #22c55e; }
+    .metric-card.disk .progress-fill { background: #8b5cf6; }
+    .metric-card.network .progress-fill { background: #f97316; }
+
+    .metric-card.normal { border-color: rgba(72, 187, 120, 0.28); }
+    .metric-card.warning { border-color: rgba(234, 179, 8, 0.28); }
+    .metric-card.critical { border-color: rgba(248, 113, 113, 0.28); }
+
+    .metric-card.normal .metric-value { color: #22c55e; }
+    .metric-card.warning .metric-value { color: #f59e0b; }
+    .metric-card.critical .metric-value { color: #f87171; }
+
+    .metric-card.cpu .metric-value { color: #38bdf8; }
+    .metric-card.ram .metric-value { color: #22c55e; }
+    .metric-card.disk .metric-value { color: #a78bfa; }
+    .metric-card.network .metric-value { color: #fbbf24; }
+
+    .chart-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .chart-title {
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+    }
+
+    .chart-title small {
+      color: #8b949e;
+      font-size: 0.88rem;
+      line-height: 1.4;
+    }
+
+    .chart-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+    }
+
+    .control-input,
+    .control-btn {
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      color: #c9d1d9;
+      padding: 10px 12px;
+      font-size: 0.9rem;
+      min-width: 130px;
+    }
+
+    .control-btn {
+      cursor: pointer;
+      background: rgba(255,255,255,0.06);
+      color: #f8fafd;
+      transition: background 150ms ease, border-color 150ms ease;
+    }
+
+    .control-btn:hover {
+      background: rgba(88,166,255,0.15);
+      border-color: #58a6ff;
+    }
+
+    .chart-panel {
+      display: grid;
+      gap: 14px;
+      min-height: 320px;
+      background: rgba(255,255,255,0.02);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 16px;
+    }
+
+    .chart-panel canvas {
+      width: 100%;
+      height: 100%;
+      border-radius: 10px;
+      background: transparent;
+    }
+
+    .section-toolbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+      flex-wrap: wrap;
+    }
+
+    .table-container {
+      overflow: auto;
+      max-height: 240px;
+      border-radius: 10px;
+      border: 1px solid rgba(255,255,255,0.08);
+      background: rgba(255,255,255,0.02);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      color: #c9d1d9;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 12px 14px;
+      font-size: 0.8rem;
+      color: #8b949e;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(255,255,255,0.08);
+    }
+
+    tbody tr {
+      transition: background 160ms ease;
+    }
+
+    tbody tr:hover {
+      background: rgba(88,166,255,0.08);
+    }
+
+    td {
+      padding: 12px 14px;
+      font-size: 0.9rem;
+      border-bottom: 1px solid rgba(255,255,255,0.06);
+    }
+
+    input, select, textarea, button {
+      font: inherit;
+    }
+
+    input,
+    select,
+    textarea {
+      width: 100%;
+      border: 1px solid rgba(255,255,255,0.12);
+      border-radius: 8px;
+      background: rgba(255,255,255,0.06);
+      color: #c9d1d9;
+      padding: 10px 12px;
+      transition: all 0.2s ease;
+    }
+
+    input:focus,
+    select:focus,
+    textarea:focus {
+      outline: none;
+      background: rgba(255,255,255,0.08);
+      border-color: rgba(88,166,255,0.5);
+      box-shadow: 0 0 12px rgba(47, 128, 237, 0.15);
+    }
+
+    input[type="checkbox"] {
+      width: 24px;
+      height: 24px;
+      cursor: pointer;
+      accent-color: #58a6ff;
+      margin-right: 8px;
+    }
+
+    textarea {
+      resize: vertical;
+      min-height: 140px;
+    }
+
+    button {
+      border: none;
+      border-radius: 8px;
+      padding: 10px 14px;
+      background: linear-gradient(135deg, #2f80ed 0%, #1e5fc3 100%);
+      color: #fff;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      font-weight: 600;
+    }
+
+    button:hover {
+      transform: translateY(-1px);
+      box-shadow: 0 8px 16px rgba(47, 128, 237, 0.25);
+    }
+
+    button:active {
+      transform: translateY(0);
+    }
+
+    .side-tabs-panel {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      height: 100%;
+    }
+
+    .tab-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-left: auto;
+    }
+
+    .tab-btn {
+      padding: 8px 12px;
+      border-radius: 999px;
+      border: 1px solid rgba(255,255,255,0.12);
+      background: rgba(255,255,255,0.04);
+      color: #8b949e;
+      font-size: 0.82rem;
+      cursor: pointer;
+      transition: background 150ms ease, color 150ms ease;
+    }
+
+    .tab-btn.active {
+      background: #2f80ed;
+      color: #fff;
+      border-color: #2f80ed;
+    }
+
+    .tab-content {
+      display: flex;
+      flex-direction: column;
+      min-height: 0;
+      gap: 16px;
+    }
+
+    .tab-pane {
+      display: none;
+      min-height: 0;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .tab-panel-scroll {
+      max-height: 224px;
+      overflow-y: auto;
+      padding-right: 4px;
+      display: grid;
+      gap: 10px;
+    }
+
+    .alert-item,
+    .service-item,
+    .summary-chip {
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 10px;
+      padding: 12px;
+    }
+
+    .service-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .service-item strong {
+      color: #f8fafd;
+      font-size: 0.92rem;
+    }
+
+    .service-item span {
+      color: #8b949e;
+      font-size: 0.82rem;
+    }
+
+    .summary-chip {
+      display: grid;
+      gap: 6px;
+    }
+
+    .summary-chip strong {
+      font-size: 1.05rem;
+      color: #f8fafd;
+    }
+
+    .summary-chip span {
+      color: #8b949e;rgba(255,255,255,0.08)
+      font-size: 0.82rem;
+    }
+
+    .footer-note {
+      display: flex;
+      justify-content: space-between;
+      gap: 12px;
+      font-size: 0.82rem;
+      color: #8b949e;
+      padding-top: 8px;
+      border-top: 1px solid #21262d;
+    }
+
+    .status-indicator {
+      display: inline-block;
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-indicator.connected {
+      background: #2ea44f;
+      box-shadow: 0 0 8px rgba(46, 164, 79, 0.5);
+    }
+
+    .status-indicator.disconnected {
+      background: #8b949e;
+      box-shadow: 0 0 8px rgba(139, 148, 158, 0.3);
+    }
+
+    .status-text {
+      font-size: 0.9rem;
+      color: #c9d1d9;
+    }
+
+    @media (max-width: 1080px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+        max-height: none;
+        min-height: auto;
+      }
+
+      .metric-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 680px) {
+      .dashboard-shell {
+        padding: 0.5rem;
+        height: auto;
+        min-height: 100vh;
+      }
+
+      .topbar,
+      .topbar-meta,
+      .section-panel {
+        padding: 12px;
+        border-radius: 8px;
+      }
+
+      .topbar {
+        flex-direction: column;
+        gap: 12px;
+        align-items: flex-start;
+      }
+
+      .user-tools {
+        width: 100%;
+        justify-content: space-between;
+      }
+
+      .chart-actions,
+      .tab-buttons {
+        width: 100%;
+      }
+
+      .metric-row {
+        grid-template-columns: 1fr;
+      }
+
+      .topbar-meta {
+        grid-template-columns: 1fr;
+      }
+
+      .dashboard-column--main,
+      .dashboard-column--side {
+        gap: 12px;
+      }
+
+      .section-toolbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .tab-pane {
+        padding-right: 0;
+      }
+
+      input[type="checkbox"] {
+        width: 20px;
+        height: 20px;
+      }
+
+      .table-container {
+        max-height: 400px;
+      }
+
+      table {
+        font-size: 0.8rem;
+      }
+
+      td, th {
+        padding: 8px 10px;
+      }
+    }
+  </style>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      color: #e2e8f0;
+      background-color: #070b14;
+    }
+
+    html, body {
+      margin: 0;
+      min-height: 100%;
+      background: radial-gradient(circle at top, rgba(56, 189, 248, 0.16), transparent 28%),
+                  linear-gradient(180deg, #050812 0%, #0d1626 100%);
+      color: inherit;
+    }
+
+    body {
+      min-height: 100vh;
+      line-height: 1.55;
+      overscroll-behavior-y: contain;
+    }
+
+    .dashboard-shell {
+      width: min(100%, 100vw);
+      max-width: 100vw;
+      margin: 0;
+      padding: 18px 20px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-height: 100vh;
+      overflow-x: hidden;
+      overflow-y: visible;
+    }
+
+    .topbar {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 20px;
+      padding: 18px 22px;
+      border-radius: 24px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      box-shadow: 0 26px 80px rgba(4, 11, 25, 0.28);
+    }
+
+    .brand {
+      font-size: 1rem;
+      font-weight: 700;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: #f8fafc;
+    }
+
+    .user-tools {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      color: #94a3b8;
+      font-size: 0.95rem;
+      flex-wrap: wrap;
+    }
+
+    .user-tools a {
+      color: #7dd3fc;
+      font-weight: 600;
+    }
+
+    .stats-grid {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .stat-card {
+      padding: 18px 20px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.08);
+      display: flex;
+      flex-direction: column;
+      gap: 8px;
+      min-height: 94px;
+    }
+
+    .stat-card strong {
+      font-size: 0.86rem;
+      color: #cbd5e1;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .stat-card span {
+      color: #f8fafc;
+      font-size: 0.97rem;
+      font-weight: 600;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 8px 14px;
+      border-radius: 999px;
+      background: rgba(56, 189, 248, 0.14);
+      color: #7dd3fc;
+      border: 1px solid rgba(125, 211, 252, 0.2);
+      font-size: 0.82rem;
+      font-weight: 700;
+      min-width: 110px;
+    }
+
+    .dashboard-grid {
+      display: grid;
+      grid-template-columns: minmax(300px, 1.9fr) minmax(280px, 1fr);
+      gap: 18px;
+      min-height: 0;
+      max-height: none;
+      width: 100%;
+    }
+
+    .section-panel,
+    .drawer-panel {
+      background: rgba(15, 23, 42, 0.92);
+      border: 1px solid rgba(148, 163, 184, 0.08);
+      border-radius: 24px;
+      padding: 22px;
+      display: flex;
+      flex-direction: column;
+      gap: 18px;
+      min-height: 0;
+      overflow: visible;
+      width: 100%;
+    }
+
+    .section-header,
+    .panel-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 16px;
+      align-items: flex-start;
+      flex-wrap: wrap;
+    }
+
+    .section-header h2,
+    .panel-title h2,
+    .section-header h3,
+    .section-header h4 {
+      margin: 0;
+      color: #f8fafc;
+      font-weight: 700;
+      letter-spacing: -0.02em;
+    }
+
+    .section-header p,
+    .section-header small,
+    .section-note {
+      margin: 0;
+      color: #94a3b8;
+      font-size: 0.92rem;
+      line-height: 1.55;
+    }
+
+    .action-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 14px;
+      align-items: stretch;
+      width: 100%;
+    }
+
+    .control-btn {
+      border: 1px solid rgba(148, 163, 184, 0.16);
+      border-radius: 18px;
+      background: rgba(56, 189, 248, 0.12);
+      color: #e2e8f0;
+      padding: 14px 18px;
+      font-weight: 700;
+      cursor: pointer;
+      transition: transform 180ms ease, border-color 180ms ease, background-color 180ms ease;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      min-height: 56px;
+      text-align: center;
+    }
+
+    .control-btn:hover {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.32);
+      transform: translateY(-1px);
+    }
+
+    .control-btn.secondary {
+      background: rgba(148, 163, 184, 0.12);
+      color: #cbd5e1;
+    }
+
+    .control-input,
+    .control-textarea {
+      width: 100%;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.14);
+      background: rgba(15, 23, 42, 0.98);
+      color: #e2e8f0;
+      padding: 14px 16px;
+      transition: border-color 180ms ease, box-shadow 180ms ease, background 180ms ease;
+      outline: none;
+      position: relative;
+      z-index: 1;
+    }
+
+    .control-input:focus,
+    .control-textarea:focus {
+      border-color: rgba(56, 189, 248, 0.6);
+      box-shadow: 0 0 22px rgba(56, 189, 248, 0.12);
+      background: rgba(15, 23, 42, 1);
+    }
+
+    textarea.control-textarea {
+      min-width: 0;
+      width: 100%;
+      min-height: 170px;
+      max-height: 360px;
+      resize: vertical;
+      line-height: 1.6;
+      font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace;
+      letter-spacing: 0.01em;
+      pointer-events: auto;
+    }
+
+    .panel-row {
+      display: grid;
+      gap: 16px;
+    }
+
+    .panel-row.columns-2 {
+      grid-template-columns: 1.45fr 1fr;
+      gap: 18px;
+      align-items: start;
+    }
+
+    .panel-actions {
+      display: flex;
+      flex-wrap: wrap;
+      justify-content: space-between;
+      gap: 14px;
+      align-items: center;
+    }
+
+    .panel-close {
+      appearance: none;
+      border: none;
+      border-radius: 14px;
+      padding: 10px 14px;
+      background: rgba(255,255,255,0.06);
+      color: #cbd5e1;
+      cursor: pointer;
+    }
+
+    .panel-close:hover {
+      background: rgba(255,255,255,0.1);
+    }
+
+    .drawer-panel {
+      display: grid;
+      gap: 16px;
+      border-radius: 18px;
+      background: rgba(15, 23, 42, 0.98);
+      border: 1px solid rgba(88, 166, 255, 0.18);
+      padding: 18px;
+      box-shadow: 0 22px 60px rgba(0, 0, 0, 0.32);
+    }
+
+    .drawer-panel.hidden {
+      display: none;
+    }
+
+    .chart-panel {
+      display: grid;
+      grid-template-columns: repeat(2, minmax(0, 1fr));
+      gap: 16px;
+      min-height: 0;
+    }
+
+    .chart-panel.hidden {
+      display: none;
+    }
+
+    .add-form-panel {
+      display: grid;
+      gap: 12px;
+      padding: 16px;
+      border-radius: 18px;
+      background: rgba(56, 166, 255, 0.08);
+      border: 1px solid rgba(56, 166, 255, 0.22);
+    }
+
+    .metric-row {
+      display: grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+
+    .metric-card {
+      padding: 18px 20px;
+      border-radius: 20px;
+      background: rgba(15, 23, 42, 0.95);
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+      min-height: 120px;
+      transition: transform 180ms ease, border-color 180ms ease, background 180ms ease;
+    }
+
+    .metric-card:hover {
+      transform: translateY(-1px);
+      border-color: rgba(56, 189, 248, 0.5);
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    .metric-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 10px;
+      color: #94a3b8;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      font-size: 0.78rem;
+    }
+
+    .metric-value {
+      font-size: 1.6rem;
+      font-weight: 700;
+      color: #f8fafc;
+    }
+
+    .metric-card.cpu .metric-value { color: #7dd3fc; }
+    .metric-card.ram .metric-value { color: #22c55e; }
+    .metric-card.disk .metric-value { color: #a78bfa; }
+    .metric-card.temp .metric-value { color: #fb7185; }
+
+    .chart-panel {
+      display: grid;
+      gap: 18px;
+      min-height: 320px;
+    }
+
+    .chart-panel canvas {
+      width: 100%;
+      height: 220px;
+      border-radius: 18px;
+    }
+
+    .table-container {
+      overflow: auto;
+      border-radius: 20px;
+      border: 1px solid rgba(148, 163, 184, 0.08);
+      background: rgba(15, 23, 42, 0.9);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 640px;
+      color: #e2e8f0;
+    }
+
+    thead th {
+      text-align: left;
+      padding: 14px 16px;
+      font-size: 0.78rem;
+      color: #94a3b8;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+    }
+
+    tbody tr {
+      transition: background 160ms ease;
+    }
+
+    tbody tr:hover {
+      background: rgba(56, 189, 248, 0.08);
+    }
+
+    td {
+      padding: 14px 16px;
+      font-size: 0.92rem;
+      border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+    }
+
+    .tab-buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+    }
+
+    .tab-btn {
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      background: rgba(255, 255, 255, 0.04);
+      color: #cbd5e1;
+      cursor: pointer;
+      transition: background 180ms ease, border-color 180ms ease, color 180ms ease;
+      font-size: 0.88rem;
+    }
+
+    .tab-btn.active {
+      background: rgba(56, 189, 248, 0.18);
+      border-color: rgba(56, 189, 248, 0.45);
+      color: #f8fafc;
+    }
+
+    .tab-pane {
+      display: none;
+      min-height: 0;
+      overflow: auto;
+    }
+
+    .tab-pane.active {
+      display: block;
+    }
+
+    .tab-panel-scroll {
+      max-height: 260px;
+      overflow-y: auto;
+      display: grid;
+      gap: 12px;
+      padding-right: 4px;
+    }
+
+    .alert-item,
+    .service-item,
+    .summary-chip {
+      padding: 14px 16px;
+      border-radius: 18px;
+      border: 1px solid rgba(148, 163, 184, 0.1);
+      background: rgba(255, 255, 255, 0.03);
+    }
+
+    .service-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .service-item strong {
+      color: #f8fafc;
+      font-size: 0.95rem;
+    }
+
+    .service-item span {
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+
+    .summary-chip strong {
+      font-size: 1rem;
+      color: #f8fafc;
+    }
+
+    .summary-chip span {
+      color: #94a3b8;
+      font-size: 0.85rem;
+    }
+
+    .status-indicator {
+      width: 12px;
+      height: 12px;
+      border-radius: 50%;
+      margin-right: 8px;
+    }
+
+    .status-indicator.connected {
+      background: #22c55e;
+      box-shadow: 0 0 10px rgba(34, 197, 94, 0.25);
+    }
+
+    .status-indicator.disconnected {
+      background: #64748b;
+      box-shadow: 0 0 8px rgba(100, 116, 139, 0.18);
+    }
+
+    .status-text {
+      color: #cbd5e1;
+      font-size: 0.92rem;
+    }
+
+    .toast {
+      position: fixed;
+      left: 50%;
+      bottom: 26px;
+      transform: translateX(-50%);
+      background: rgba(15, 23, 42, 0.95);
+      color: #e2e8f0;
+      padding: 14px 18px;
+      border-radius: 16px;
+      border: 1px solid rgba(148, 163, 184, 0.12);
+      box-shadow: 0 18px 50px rgba(4, 11, 25, 0.25);
+      z-index: 9999;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 180ms ease, transform 180ms ease;
+      min-width: 260px;
+      max-width: min(90%, 440px);
+      text-align: center;
+      font-size: 0.95rem;
+    }
+
+    .toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    @media (max-width: 1080px) {
+      .dashboard-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .stats-grid,
+      .metric-row {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+      }
+    }
+
+    @media (max-width: 720px) {
+      .dashboard-shell {
+        padding: 16px;
+      }
+
+      .topbar {
+        flex-direction: column;
+        align-items: flex-start;
+      }
+
+      .stats-grid,
+      .action-grid,
+      .metric-row,
+      .panel-row.columns-2 {
+        grid-template-columns: 1fr;
+      }
+
+      .section-header,
+      .panel-title {
+        align-items: flex-start;
+      }
+
+      .table-container {
+        min-width: 100%;
+      }
+
+      table {
+        min-width: 100%;
+      }
+    }
+  </style>
+</head>
+<body class="dashboard-page" data-username="{{ username }}">
+  <div class="dashboard-shell">
+    <header class="topbar">
+      <div class="brand">ALFA MONITOR</div>
+      <div class="user-tools">
+        <span id="user-display"></span>
+        <a href="/logout">Logout</a>
+      </div>
+    </header>
+
+    <div class="stats-grid">
+      <div class="stat-card">
+        <strong>Server</strong>
+        <span>alpha-server.local</span>
+      </div>
+      <div class="stat-card">
+        <strong>Uptime</strong>
+        <span>14d 7h</span>
+      </div>
+      <div class="stat-card">
+        <strong>Sync interval</strong>
+        <span>30 seconds</span>
+      </div>
+      <div class="stat-card">
+        <strong>Status</strong>
+        <span class="pill">Connected</span>
+      </div>
+    </div>
+
+    <main class="dashboard-grid">
+      <div class="dashboard-column dashboard-column--main">
+        <section class="section-panel">
+          <div class="section-header">
+            <div>
+              <h2>Live Metrics</h2>
+              <p>Compact performance overview</p>
+            </div>
+            <div class="pill">Realtime</div>
+          </div>
+          <div id="live-status-summary" class="metric-summary">Waiting for server data...</div>
+
+          <div class="metric-row">
+            <article class="metric-card cpu" id="cpu-card">
+              <div class="metric-title"><span>CPU Usage</span><span class="metric-badge">Realtime</span></div>
+              <div class="metric-value" id="cpu-value">--%</div>
+              <div class="metric-detail">
+                <div class="progress-label"><span id="cpu-status-label">Idle</span><span id="cpu-util-label">--%</span></div>
+                <div class="progress-track"><div class="progress-fill" id="cpu-progress"></div></div>
+              </div>
+            </article>
+
+            <article class="metric-card ram" id="ram-card">
+              <div class="metric-title"><span>RAM Usage</span><span class="metric-badge">Memory</span></div>
+              <div class="metric-value" id="ram-value">--%</div>
+              <div class="metric-detail">
+                <div class="progress-label"><span id="ram-used-value">-- GB</span><span id="ram-total-value">-- GB</span></div>
+                <div class="progress-track"><div class="progress-fill" id="ram-progress"></div></div>
+              </div>
+            </article>
+
+            <article class="metric-card disk" id="disk-card">
+              <div class="metric-title"><span>Disk I/O</span><span class="metric-badge">Throughput</span></div>
+              <div class="metric-value" id="disk-value">--%</div>
+              <div class="metric-detail">
+                <div class="metric-line"><span>Read</span><strong id="disk-read-value">--</strong></div>
+                <div class="metric-line"><span>Write</span><strong id="disk-write-value">--</strong></div>
+              </div>
+            </article>
+
+            <article class="metric-card network" id="network-card">
+              <div class="metric-title"><span>Network</span><span class="metric-badge">Traffic</span></div>
+              <div class="metric-value" id="net-usage-value">--</div>
+              <div class="metric-detail">
+                <div class="metric-line"><span>Inbound</span><strong id="net-in-value">--</strong></div>
+                <div class="metric-line"><span>Outbound</span><strong id="net-out-value">--</strong></div>
+              </div>
+            </article>
+          </div>
+        </section>
+
+        <section class="section-panel">
+          <div class="section-header">
+            <div>
+              <h2>Quick Actions</h2>
+              <p class="section-note">Open only what you need. Heavy content loads on demand to keep the dashboard clean.</p>
+            </div>
+          </div>
+          <div class="action-grid">
+            <button class="control-btn dashboard-action-btn" data-panel="performance-panel">Performance Trend</button>
+            <button class="control-btn dashboard-action-btn" data-panel="playbook-panel">Playbook Editor</button>
+            <button class="control-btn dashboard-action-btn" data-panel="services-panel">Services</button>
+          </div>
+        </section>
+
+        <section class="section-panel drawer-panel lazy-panel hidden" id="performance-panel" aria-hidden="true">
+          <div class="panel-title">
+            <div>
+              <h2>Performance Trend</h2>
+              <p class="section-note">Historical metrics load only after selecting a server.</p>
+            </div>
+            <button class="panel-close control-btn secondary" id="close-performance">Close</button>
+          </div>
+          <div class="panel-row columns-2">
+            <div>
+              <label for="metrics-server-select" class="section-note">Select server</label>
+              <select id="metrics-server-select" class="control-input">
+                <option value="" disabled selected>Select server</option>
+              </select>
+            </div>
+            <div class="panel-actions">
+              <button id="load-metrics" class="control-btn">View chart</button>
+            </div>
+          </div>
+          <div class="chart-panel hidden" id="charts-container">
+            <div>
+              <h4 style="margin:0 0 8px; color:#8b949e; font-weight:600; font-size:0.86rem;">CPU Usage</h4>
+              <canvas id="cpuChart"></canvas>
+            </div>
+            <div>
+              <h4 style="margin:16px 0 8px; color:#8b949e; font-weight:600; font-size:0.86rem;">Memory Usage</h4>
+              <canvas id="ramChart"></canvas>
+            </div>
+            <div style="grid-column: 1 / -1;">
+              <h4 style="margin:16px 0 8px; color:#8b949e; font-weight:600; font-size:0.86rem;">Disk Usage</h4>
+              <canvas id="diskChart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-panel drawer-panel lazy-panel hidden" id="playbook-panel" aria-hidden="true">
+          <div class="panel-title">
+            <div>
+              <h2>Playbook Editor</h2>
+              <p class="section-note">Run Ansible jobs across selected servers. Use <code>hosts: all</code> in playbooks.</p>
+            </div>
+            <button class="panel-close control-btn secondary" id="close-playbook">Close</button>
+          </div>
+          <textarea id="playbook-editor" class="control-textarea">---
+- hosts: all
+  gather_facts: false
+  tasks:
+    - name: Run a command on every selected server
+      ansible.builtin.command:
+        cmd: echo "Hello from {{ inventory_hostname }}"
+      changed_when: false
+
+    - name: Ensure a package is installed
+      ansible.builtin.package:
+        name: nginx
+        state: present
+</textarea>
+          <div class="panel-actions">
+            <span class="section-note">Select servers using the checkboxes in the server table.</span>
+            <button id="run-playbook" class="control-btn">Run playbook</button>
+          </div>
+        </section>
+
+        <section class="section-panel">
+          <div class="section-header">
+            <div>
+              <h2>Targeted Command Execution</h2>
+              <p class="section-note">Choose servers, type a shell command, and execute it on the selected host(s).</p>
+            </div>
+          </div>
+          <div id="command-status-panel" class="panel-actions">
+            <span class="section-note">Status: <strong id="command-status-text">Idle</strong></span>
+            <span class="section-note">Last run: <strong id="command-status-time">Never</strong></span>
+          </div>
+          <div class="panel-row columns-2">
+            <div>
+              <label for="command-server-select" class="section-note">Target servers</label>
+              <select id="command-server-select" class="control-input" multiple size="4"></select>
+            </div>
+            <div>
+              <label for="command-input" class="section-note">Command</label>
+              <textarea id="command-input" class="control-textarea" rows="6" spellcheck="false" autocomplete="off" autocapitalize="off" autocorrect="off" placeholder="sudo journalctl -u myservice --no-pager | tail -n 40"></textarea>
+            </div>
+          </div>
+          <div class="panel-actions">
+            <span class="section-note">Use the server checkbox list in the server panel above.</span>
+            <button id="run-command" class="control-btn">Run command</button>
+          </div>
+          <div id="command-output" class="command-output">Command output will appear here after execution.</div>
+        </section>
+      </div>
+
+      <div class="dashboard-column dashboard-column--side">
+        <section class="section-panel side-tabs-panel">
+          <div class="section-header">
+            <div>
+              <h2>Control panel</h2>
+              <p>Quick access to servers, alerts and history.</p>
+            </div>
+            <div class="tab-buttons" id="dashboard-tab-buttons">
+              <button class="tab-btn active" data-tab="servers">Servers</button>
+              <button class="tab-btn" data-tab="alerts">Alerts</button>
+              <button class="tab-btn" data-tab="history">History</button>
+              <button class="tab-btn" data-tab="notify">Notify</button>
+              <button class="tab-btn" data-tab="users">Users</button>
+            </div>
+          </div>
+
+          <div class="tab-content">
+            <div class="tab-pane active" id="tab-servers">
+              <div class="section-toolbar">
+                <h3>Servers</h3>
+                <button id="open-add-server" class="control-btn">Add</button>
+              </div>
+              <div id="add-server-form" class="add-form-panel hidden">
+                <form id="server-form" style="display:grid; gap:10px;">
+                  <input name="name" placeholder="Name" required />
+                  <input name="host" placeholder="Host/IP" required />
+                  <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+                    <input name="username" placeholder="SSH User" required />
+                    <input name="password" placeholder="SSH Password" type="password" required />
+                  </div>
+                  <div style="display:flex; gap:10px;">
+                    <input name="port" type="number" value="22" />
+                    <button type="submit" style="flex:1; background:#2f80ed;">Save</button>
+                    <button type="button" id="cancel-add-server" style="flex:1; background:#666;">Cancel</button>
+                  </div>
+                </form>
+              </div>
+              <div class="table-container" style="max-height: none; overflow-x: hidden;">
+                <table style="table-layout: fixed; word-break: break-word;">
+                  <thead>
+                    <tr>
+                      <th style="width:32px;"></th>
+                      <th style="width:18%;">Server</th>
+                      <th style="width:20%;">Host</th>
+                      <th style="width:50px;">Port</th>
+                      <th style="width:90px;">Status</th>
+                      <th style="width:120px;">Action</th>
+                    </tr>
+                  </thead>
+                  <tbody id="server-table-body">
+                    {% for server in servers %}
+                    <tr data-server-id="{{ server.id }}" data-server-host="{{ server.host }}">
+                      <td><input type="checkbox" class="server-select" value="{{ server.id }}" /></td>
+                      <td>{{ server.name }}</td>
+                      <td>{{ server.host }}</td>
+                      <td>{{ server.port }}</td>
+                      <td><span class="status-indicator disconnected" title="Checking..."></span><span class="status-text">{{ "Checking..." if server.enabled else "Disabled" }}</span></td>
+                      <td><button onclick="editServer({{ server.id }})">Edit</button></td>
+                    </tr>
+                    {% endfor %}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            <div class="tab-pane" id="tab-alerts">
+              <div class="section-toolbar">
+                <h3>Alerts</h3>
+                <button id="clear-alerts" class="control-btn" style="background:#ff6384; border-color:#ff6384;">Clear</button>
+              </div>
+              <div id="alerts-list" class="tab-panel-scroll">
+                <div class="alert-item" style="text-align:center;">No active alerts</div>
+              </div>
+            </div>
+
+            <div class="tab-pane" id="tab-history">
+              <div class="section-toolbar">
+                <h3>Playbook History</h3>
+                <button id="clear-executions" class="control-btn" style="background:#ff6384; border-color:#ff6384; padding:6px 10px; font-size:0.85rem;">Clear</button>
+              </div>
+              <div id="execution-history" class="tab-panel-scroll">
+                <div class="alert-item" style="text-align:center;">No executions yet</div>
+              </div>
+            </div>
+
+            <div class="tab-pane" id="tab-notify">
+              <div class="section-toolbar">
+                <h3>Notifications</h3>
+              </div>
+              <div style="display:grid; gap:10px; font-size:0.9rem;">
+                <div style="display:flex; align-items:center; gap:10px;">
+                  <input id="notif-telegram-enabled" type="checkbox" style="width:18px; height:18px;" />
+                  <label for="notif-telegram-enabled" style="font-size:0.95rem; color:#f8fafd; font-weight:600;">Enable Telegram notifications</label>
+                </div>
+                <div>
+                  <label style="display:block; margin-bottom:4px; color:#8b949e; font-size:0.82rem;">Telegram Bot Token</label>
+                  <input id="notif-telegram-token" placeholder="123456789:ABCDefGHI..." style="padding:8px; font-size:0.85rem;" />
+                </div>
+                <div>
+                  <label style="display:block; margin-bottom:4px; color:#8b949e; font-size:0.82rem;">Telegram Chat ID</label>
+                  <input id="notif-telegram-chat" placeholder="Your Telegram Chat ID" style="padding:8px; font-size:0.85rem;" />
+                </div>
+                <div>
+                  <label style="display:block; margin-bottom:4px; color:#8b949e; font-size:0.82rem;">Notification interval (seconds)</label>
+                  <input id="notif-telegram-interval" type="number" min="60" placeholder="300" style="padding:8px; font-size:0.85rem;" />
+                </div>
+                <div>
+                  <label style="display:block; margin-bottom:4px; color:#8b949e; font-size:0.82rem;">Discord Webhook</label>
+                  <input id="notif-discord-webhook" placeholder="https://discordapp.com/api/webhooks/..." style="padding:8px; font-size:0.85rem;" />
+                </div>
+                <div style="display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:6px;">
+                  <button id="save-notif" style="background:#2f80ed; padding:8px; font-size:0.85rem;">Save</button>
+                  <button id="test-notif" style="background:#4caf50; padding:8px; font-size:0.85rem;">Test</button>
+                </div>
+              </div>
+            </div>
+
+            <div class="tab-pane" id="tab-users">
+              <div class="section-toolbar">
+                <h3>User Accounts</h3>
+              </div>
+              <div style="display:grid; gap:8px; margin-bottom:10px;">
+                <input id="new-user-username" placeholder="Username" style="padding:8px; font-size:0.85rem;" />
+                <input id="new-user-password" type="password" placeholder="Password" style="padding:8px; font-size:0.85rem;" />
+                <button id="create-user" style="background:#2f80ed; padding:8px; font-size:0.85rem;">Create</button>
+              </div>
+              <div style="border-top:1px solid #30363d; padding-top:8px;">
+                <small style="color:#8b949e; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em;">Users</small>
+                <div id="users-list" class="tab-panel-scroll" style="max-height:140px; margin-top:6px;"></div>
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <section class="section-panel drawer-panel lazy-panel hidden" id="services-panel" aria-hidden="true">
+          <div class="panel-title">
+            <div>
+              <h2>Services</h2>
+              <p class="section-note">Live service health opens when you need it.</p>
+            </div>
+            <button class="panel-close control-btn secondary" id="close-services">Close</button>
+          </div>
+          <div id="services-list" class="tab-panel-scroll">
+            <div class="service-item"><div><strong>nginx</strong><span>Web</span></div><div class="status-dot"></div></div>
+            <div class="service-item"><div><strong>postgres</strong><span>DB</span></div><div class="status-dot"></div></div>
+            <div class="service-item"><div><strong>redis</strong><span>Cache</span></div><div class="status-dot"></div></div>
+          </div>
+        </section>
+      </div>
+    </main>
+  </div>
+
+  <div id="inactivity-toast" class="toast hidden">Logging out due to inactivity...</div>
+  <script src="/static/js/app.js?v=2"></script>
+</body>
+</html>

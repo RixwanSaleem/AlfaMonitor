@@ -1,0 +1,64 @@
+Agent installation quick steps:
+
+=== LINUX SERVER ===
+
+# On target server (as root or with sudo):
+
+mkdir -p /opt/monitoring-agent
+cd /opt/monitoring-agent
+# replace HOST, USERNAME and PORT in the command provided by the dashboard
+curl -sSL https://your-dashboard.example.com/download/agents.tar.gz | tar xz
+# run once to verify
+python3 agent.py --host 1.2.3.4 --username agent --port 22
+
+# Optional: install systemd service (edit /etc/systemd/system/monitoring-agent.service as needed)
+# copy the template from the dashboard or create a unit file similar to /opt/monitoring-dashboard/static/agent_service.template
+
+# Enable and start the service:
+# sudo systemctl daemon-reload
+# sudo systemctl enable monitoring-agent
+# sudo systemctl start monitoring-agent
+
+# Or use crontab to run periodically (example every 2 minutes):
+# (crontab -e)
+# */2 * * * * cd /opt/monitoring-agent && /usr/bin/python3 agent.py --host 1.2.3.4 --username agent --port 22 >> /var/log/monitoring-agent.log 2>&1
+
+
+=== WINDOWS SERVER ===
+
+# On Windows (as Administrator):
+
+1. Install Python 3.8+ from https://www.python.org/downloads/ (check "Add Python to PATH")
+
+2. Open Command Prompt (cmd.exe) as Administrator and run:
+
+mkdir C:\MonitoringAgent
+cd C:\MonitoringAgent
+# Download agent files from dashboard or extract from archive
+# Place agent.py, system_info.py, config.py in this directory
+
+3. Install dependencies:
+pip install psutil requests
+
+4. Test the agent:
+python agent.py --host YOUR_WINDOWS_IP --username agent --port 3389
+
+5. (Optional) Schedule as a Windows Task for periodic reporting (every 2 minutes):
+
+   a. Open Task Scheduler (tasksched.msc)
+   b. Create Basic Task → Name: "Monitoring Agent"
+   c. Trigger: On a schedule (repeat every 2 minutes, indefinitely)
+   d. Action: Start a program
+      Program: C:\Python311\python.exe (or your Python path)
+      Arguments: C:\MonitoringAgent\agent.py --host YOUR_WINDOWS_IP --username agent --port 3389
+      Start in: C:\MonitoringAgent
+
+   Or use PowerShell to create the task:
+   $trigger = New-ScheduledTaskTrigger -RepetitionInterval (New-TimeSpan -Minutes 2) -Once -At (Get-Date)
+   $action = New-ScheduledTaskAction -Execute "C:\Python311\python.exe" -Argument "C:\MonitoringAgent\agent.py --host YOUR_WINDOWS_IP --username agent --port 3389"
+   Register-ScheduledTask -TaskName "Monitoring Agent" -Trigger $trigger -Action $action -RunLevel Highest
+
+6. Verify in Task Scheduler that it runs and reports successfully.
+
+Note: Agent auto-detects Windows/Linux and collects appropriate metrics (RDP, IIS, SQL services for Windows).
+
