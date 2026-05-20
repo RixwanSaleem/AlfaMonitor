@@ -1,6 +1,6 @@
 import functools
-from flask import abort, g, redirect, request, session, url_for
-from passlib.hash import bcrypt
+from flask import redirect, session, url_for
+from werkzeug.security import check_password_hash, generate_password_hash
 from backend.database import SessionLocal
 from backend.models import User
 from sqlalchemy.exc import IntegrityError
@@ -10,7 +10,7 @@ def authenticate(username: str, password: str):
     db = SessionLocal()
     user = db.query(User).filter(User.username == username).first()
     db.close()
-    if user and bcrypt.verify(password, user.password_hash):
+    if user and check_password_hash(user.password_hash, password):
         return user
     return None
 
@@ -30,7 +30,7 @@ def create_admin_user(username: str, password: str):
     if existing:
         db.close()
         return existing
-    user = User(username=username, password_hash=bcrypt.hash(password), is_admin=True)
+    user = User(username=username, password_hash=generate_password_hash(password), is_admin=True)
     db.add(user)
     try:
         db.commit()

@@ -5,10 +5,12 @@ const socket = io();
 async function apiFetch(path, opts = {}) {
   opts = Object.assign({}, opts);
   opts.credentials = opts.credentials || 'same-origin';
-  if (opts.body && typeof opts.body !== 'string') {
+
+  if (opts.body && typeof opts.body !== 'string' && !(opts.body instanceof FormData)) {
     opts.body = JSON.stringify(opts.body);
     opts.headers = Object.assign({ 'Content-Type': 'application/json' }, opts.headers || {});
   }
+
   const res = await fetch(path, opts);
   if (res.status === 401) {
     window.location = '/login';
@@ -19,6 +21,12 @@ async function apiFetch(path, opts = {}) {
 
 socket.on("connect", () => {
   console.log("Connected to dashboard socket");
+});
+
+socket.on("software_installation_complete", () => {
+  loadInstallerJobs();
+  loadInstallerHistory();
+  loadInstallerSummary();
 });
 
 socket.on("metrics", (payload) => {
@@ -378,10 +386,11 @@ async function fetchServers() {
     }
     
     const serverRows = servers.map(s => {
-      return `<tr data-server-id="${s.id}" data-server-host="${s.host}">
+      return `<tr data-server-id="${s.id}" data-server-host="${s.host}" data-server-os="${s.os_type || 'Unknown'}">
         <td><input type="checkbox" class="server-select" value="${s.id}" /></td>
         <td>${s.name}</td>
         <td>${s.host}</td>
+        <td>${s.os_type || 'Unknown'}</td>
         <td>${s.port}</td>
         <td>
           <span class="status-indicator disconnected" title="Checking..."></span>
@@ -748,38 +757,228 @@ async function loadLiveMetrics() {
   }
 }
 
-async function loadSoftwareTemplates() {
+async function loadInstallerTargets() {
   try {
-    const response = await fetch('/api/software/templates');
-    const templates = await response.json();
-    const container = document.getElementById('software-templates-list');
-    if (!container) return;
+    const installerList = document.getElementById('installer-server-list');
+    const installerEmpty = document.getElementById('installer-server-empty');
+    if (!installerList) return;
 
-    if (templates.length === 0) {
-      container.innerHTML = '<div style="text-align:center; color:#8b949e;">No templates available</div>';
+    let servers = [];
+    try {
+      const response = await apiFetch('/api/servers');
+      if (response.ok) {
+        servers = await response.json();
+      }
+    } catch (e) {
+      // API fetch failed/unauthorized — we'll fall back to the server table rendered on the page
+      servers = [];
+    }
+
+    // Fallback: read servers from the rendered server table if API returned none
+    if (!servers || servers.length === 0) {
+      const rows = Array.from(document.querySelectorAll('#server-table-body tr'));
+      servers = rows.map(r => {
+        const id = r.dataset.serverId || r.getAttribute('data-server-id');
+        const host = r.dataset.serverHost || r.getAttribute('data-server-host') || (r.children[2] ? r.children[2].textContent.trim() : '');
+        const name = r.children[1] ? r.children[1].textContent.trim() : '';
+        const osType = r.dataset.serverOs || r.getAttribute('data-server-os') || (r.children[3] ? r.children[3].textContent.trim() : 'Unknown');
+        const portText = r.children[4] ? r.children[4].textContent.trim() : '';
+        const port = parseInt(portText, 10) || 22;
+        return { id: parseInt(id, 10), name, host, port, os_type: osType, status: 'unknown', last_seen: null };
+      }).filter(s => s && s.id);
+    }
+
+    if (!servers || servers.length === 0) {
+      installerList.innerHTML = '';
+      if (installerEmpty) installerEmpty.style.display = 'block';
       return;
     }
 
-    container.innerHTML = templates.map(t => `
-      <button 
-        class="control-btn" 
-        style="background:#38bdf8; padding:6px 10px; font-size:0.8rem; text-align:left; cursor:pointer;"
-        onclick="quickInstallTemplate('${t.package_name}', '${t.name}')"
-        title="${t.description || ''}"
-      >
-        ${t.name} ${t.version ? `v${t.version}` : ''}
-      </button>
-    `).join('');
+    const formatLastSeen = (iso) => {
+      if (!iso) return 'No metrics yet';
+      const diffMs = Date.now() - new Date(iso).getTime();
+      const min = Math.round(diffMs / 60000);
+      if (min <= 0) return 'Just now';
+      if (min === 1) return '1 minute ago';
+      return `${min} minutes ago`;
+    };
+
+    installerList.innerHTML = servers.map(server => {
+      const badgeColor = server.status === 'online' ? '#22c55e' : server.status === 'stale' ? '#f59e0b' : '#94a3b8';
+      const statusLabel = server.status === 'online' ? 'Online' : server.status === 'stale' ? 'Stale' : 'Unknown';
+      const osLabel = server.os_type ? server.os_type : 'Unknown';
+      const normalizedOs = osLabel.trim().toLowerCase();
+      const canInstall = normalizedOs === 'windows' || normalizedOs === 'unknown';
+      const helperText = normalizedOs === 'windows'
+        ? 'Select this Windows server'
+        : normalizedOs === 'unknown'
+          ? 'Unknown OS — agent not confirmed yet'
+          : 'Windows installers not supported on this server';
+
+      return `
+      <label style="display:grid; gap:6px; padding:10px; border-radius:10px; border:1px solid rgba(148,163,184,0.18); background:rgba(255,255,255,0.04); cursor:pointer;">
+        <div style="display:flex; align-items:center; justify-content:space-between; gap:12px;">
+          <span style="font-size:0.95rem; color:#e2e8f0; font-weight:600;">${server.name}</span>
+          <span style="font-size:0.78rem; color:${badgeColor}; background:rgba(255,255,255,0.06); padding:2px 8px; border-radius:999px; white-space:nowrap;">${statusLabel}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px; font-size:0.84rem; color:#94a3b8; flex-wrap:wrap;">
+          <span>${server.host}:${server.port}</span>
+          <span>·</span>
+          <span>${osLabel}</span>
+          <span>·</span>
+          <span>${formatLastSeen(server.last_seen)}</span>
+        </div>
+        <div style="display:flex; align-items:center; gap:10px;">
+          <input type="checkbox" class="installer-server-checkbox" value="${server.id}" style="margin:0; width:16px; height:16px;" ${canInstall ? '' : 'disabled'} />
+          <span style="font-size:0.86rem; color:#cbd5e1;">${helperText}</span>
+        </div>
+      </label>
+    `;
+    }).join('');
+
+    if (installerEmpty) installerEmpty.style.display = 'none';
   } catch (err) {
-    console.error('Failed to load software templates', err);
+    console.error('Failed to load installer targets', err);
   }
 }
 
-async function loadSoftwareHistory() {
+async function uploadInstallerFile(file) {
+  const formData = new FormData();
+  formData.append('installer', file);
+  try {
+    const response = await apiFetch('/api/software/upload', {
+      method: 'POST',
+      body: formData,
+    });
+    return await response.json();
+  } catch (err) {
+    console.error('Failed to upload installer', err);
+    throw err;
+  }
+}
+
+async function installCustomInstaller() {
+  const fileInput = document.getElementById('installer-file-input');
+  const targetList = document.getElementById('installer-server-list');
+  const argsInput = document.getElementById('installer-args-input');
+  const statusEl = document.getElementById('installer-status');
+  const installButton = document.getElementById('install-installer-btn');
+
+  if (!fileInput || !targetList || !statusEl || !installButton) return;
+  const file = fileInput.files[0];
+  const selectedServerIds = Array.from(targetList.querySelectorAll('.installer-server-checkbox:checked'))
+    .map(input => parseInt(input.value, 10))
+    .filter(Boolean);
+  const installArgs = argsInput ? argsInput.value.trim() : '';
+
+  if (!file) {
+    statusEl.textContent = 'Please select an installer file.';
+    return;
+  }
+  if (selectedServerIds.length === 0) {
+    statusEl.textContent = 'Please choose at least one target server.';
+    return;
+  }
+
+  installButton.disabled = true;
+  statusEl.textContent = `Uploading installer for ${selectedServerIds.length} target(s)...`;
+  try {
+    const uploadData = await uploadInstallerFile(file);
+    if (!uploadData || !uploadData.id) {
+      statusEl.textContent = 'Upload failed.';
+      installButton.disabled = false;
+      return;
+    }
+
+    statusEl.textContent = 'Creating deployment job...';
+    const response = await apiFetch('/api/software/install-custom', {
+      method: 'POST',
+      body: {
+        installer_id: uploadData.id,
+        server_ids: selectedServerIds,
+        install_args: installArgs,
+      },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      statusEl.textContent = `Installation failed: ${data.error || data.message}`;
+      installButton.disabled = false;
+      return;
+    }
+
+    statusEl.textContent = 'Deployment job created. Agent will pick it up shortly.';
+    fileInput.value = '';
+    if (argsInput) argsInput.value = '';
+    targetList.querySelectorAll('.installer-server-checkbox:checked').forEach(input => input.checked = false);
+    loadInstallerHistory();
+    loadInstallerSummary();
+    loadInstallerJobs();
+  } catch (err) {
+    console.error('Installer deployment error', err);
+    statusEl.textContent = 'Installer deployment failed. Check console for details.';
+  } finally {
+    installButton.disabled = false;
+  }
+}
+
+async function installPackage() {
+  const packageName = document.getElementById('package-name-input')?.value.trim();
+  const packageVersion = document.getElementById('package-version-input')?.value.trim();
+  const targetList = document.getElementById('installer-server-list');
+  const statusEl = document.getElementById('package-install-status');
+  const installButton = document.getElementById('install-package-btn');
+
+  if (!packageName) {
+    if (statusEl) statusEl.textContent = 'Package name is required.';
+    return;
+  }
+  if (!targetList) return;
+
+  const selectedServerIds = Array.from(targetList.querySelectorAll('.installer-server-checkbox:checked'))
+    .map(input => parseInt(input.value, 10))
+    .filter(Boolean);
+
+  if (selectedServerIds.length === 0) {
+    if (statusEl) statusEl.textContent = 'Please select at least one target server.';
+    return;
+  }
+
+  installButton.disabled = true;
+  if (statusEl) statusEl.textContent = `Sending install request for ${packageName}...`;
+
+  try {
+    const response = await apiFetch('/api/software/install', {
+      method: 'POST',
+      body: {
+        server_ids: selectedServerIds,
+        package_name: packageName,
+        package_version: packageVersion,
+      },
+    });
+    const data = await response.json();
+    if (!response.ok) {
+      if (statusEl) statusEl.textContent = `Package install failed: ${data.error || data.message}`;
+      return;
+    }
+    if (statusEl) statusEl.textContent = `Package install requested: ${packageName}. Check history below.`;
+    document.getElementById('package-name-input').value = '';
+    document.getElementById('package-version-input').value = '';
+    loadInstallerHistory();
+    loadInstallerSummary();
+    loadInstallerJobs();
+  } catch (err) {
+    console.error('Package install error', err);
+    if (statusEl) statusEl.textContent = 'Package install failed. Check console for details.';
+  } finally {
+    installButton.disabled = false;
+  }
+}
+
+async function loadInstallerHistory() {
   try {
     const response = await fetch('/api/software/history');
     const history = await response.json();
-    const container = document.getElementById('software-history-list');
+    const container = document.getElementById('installer-history-list');
     if (!container) return;
 
     if (history.length === 0) {
@@ -787,91 +986,88 @@ async function loadSoftwareHistory() {
       return;
     }
 
-    container.innerHTML = history.slice(0, 8).map(h => `
+    container.innerHTML = history.slice(0, 8).map(h => {
+      const typeLabel = h.type === 'installer' ? 'Installer' : 'Package';
+      const versionLabel = h.package_version ? `v${h.package_version}` : '';
+      return `
       <div style="padding:6px; background:rgba(255,255,255,0.04); border-radius:6px; color:#cbd5e1;">
-        <div style="font-weight:600; font-size:0.85rem;">${h.package_name} ${h.package_version ? `v${h.package_version}` : ''}</div>
+        <div style="font-weight:600; font-size:0.85rem;">[${typeLabel}] ${h.package_name} ${versionLabel}</div>
         <div style="font-size:0.75rem; color:#8b949e;">
           <span style="color:${h.status === 'success' ? '#22c55e' : h.status === 'failed' ? '#ef4444' : '#f59e0b'}">${h.status.toUpperCase()}</span>
           · ${new Date(h.created_at).toLocaleString()}
         </div>
       </div>
-    `).join('');
+    `;
+    }).join('');
   } catch (err) {
     console.error('Failed to load software history', err);
   }
 }
 
-async function installPackage(packageName, packageVersion = null) {
-  const selectedServers = Array.from(document.querySelectorAll('.server-select:checked')).map(cb => parseInt(cb.value));
-  
-  if (selectedServers.length === 0) {
-    alert('Please select at least one server');
-    return;
-  }
-
-  if (!packageName.trim()) {
-    alert('Please enter a package name');
-    return;
-  }
-
+async function loadInstallerSummary() {
   try {
-    const response = await fetch('/api/software/install', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        server_ids: selectedServers,
-        package_name: packageName.trim(),
-        package_version: packageVersion ? packageVersion.trim() : null
-      })
-    });
+    const response = await fetch('/api/software/history');
+    const history = await response.json();
+    const installerJobs = history.filter(job => job.type === 'installer');
+    const summary = {
+      pending: installerJobs.filter(job => job.status === 'pending').length,
+      running: installerJobs.filter(job => job.status === 'running').length,
+      success: installerJobs.filter(job => job.status === 'success').length,
+      failed: installerJobs.filter(job => job.status === 'failed').length,
+    };
 
-    const data = await response.json();
-    if (response.ok) {
-      alert(`Installation started for ${packageName}`);
-      document.getElementById('software-package-input').value = '';
-      document.getElementById('software-version-input').value = '';
-      setTimeout(() => {
-        loadSoftwareHistory();
-      }, 1000);
-    } else {
-      alert(`Error: ${data.error}`);
-    }
+    document.getElementById('summary-pending').textContent = summary.pending;
+    document.getElementById('summary-running').textContent = summary.running;
+    document.getElementById('summary-success').textContent = summary.success;
+    document.getElementById('summary-failed').textContent = summary.failed;
   } catch (err) {
-    console.error('Failed to install package', err);
-    alert('Failed to install package');
+    console.error('Failed to load installer summary', err);
   }
 }
 
-function quickInstallTemplate(packageName, templateName) {
-  const selectedServers = Array.from(document.querySelectorAll('.server-select:checked')).map(cb => parseInt(cb.value));
-  
-  if (selectedServers.length === 0) {
-    alert('Please select at least one server');
-    return;
-  }
+async function loadInstallerJobs() {
+  try {
+    const response = await fetch('/api/software/history');
+    const history = await response.json();
+    const container = document.getElementById('installer-jobs-list');
+    if (!container) return;
 
-  if (confirm(`Install ${templateName}?`)) {
-    installPackage(packageName, null);
+    const activeJobs = history.filter(job => job.type === 'installer' && ['pending', 'running'].includes(job.status));
+    if (activeJobs.length === 0) {
+      container.innerHTML = '<div style="text-align:center; color:#8b949e;">No active deployment jobs</div>';
+      return;
+    }
+
+    container.innerHTML = activeJobs.map(job => `
+      <div style="padding:8px; background:rgba(255,255,255,0.04); border-radius:8px; color:#cbd5e1;">
+        <div style="font-weight:600; font-size:0.85rem;">${job.package_name}</div>
+        <div style="font-size:0.78rem; color:#8b949e;">Status: <strong>${job.status}</strong></div>
+        <div style="font-size:0.75rem; color:#8b949e;">Started: ${new Date(job.created_at).toLocaleString()}</div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('Failed to load installer jobs', err);
   }
 }
 
 document.addEventListener('DOMContentLoaded', function() {
-  const installBtn = document.getElementById('install-package-btn');
-  if (installBtn) {
-    installBtn.addEventListener('click', function() {
-      const packageName = document.getElementById('software-package-input').value;
-      const packageVersion = document.getElementById('software-version-input').value;
-      installPackage(packageName, packageVersion);
-    });
+  const installerBtn = document.getElementById('install-installer-btn');
+  if (installerBtn) {
+    installerBtn.addEventListener('click', installCustomInstaller);
+  }
+  const packageBtn = document.getElementById('install-package-btn');
+  if (packageBtn) {
+    packageBtn.addEventListener('click', installPackage);
   }
 
-  const refreshBtn = document.getElementById('refresh-software-templates');
-  if (refreshBtn) {
-    refreshBtn.addEventListener('click', loadSoftwareTemplates);
-  }
+  loadInstallerHistory();
+  loadInstallerSummary();
+  loadInstallerTargets();
+  loadInstallerJobs();
 
-  loadSoftwareTemplates();
-  loadSoftwareHistory();
-
-  setInterval(loadSoftwareHistory, 10000);
+  setInterval(() => {
+    loadInstallerHistory();
+    loadInstallerSummary();
+    loadInstallerJobs();
+  }, 10000);
 });

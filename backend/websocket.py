@@ -3,8 +3,15 @@ import os
 from flask_socketio import SocketIO
 
 # Force the simpler threading async mode to be compatible with Gunicorn gthread.
-# Restrict CORS to allowed origins only
-allowed_origins = os.environ.get("ALLOWED_ORIGINS", "http://localhost:5000,http://127.0.0.1:5000").split(",")
+# CORS: allow configuring via ALLOWED_ORIGINS env var (comma-separated).
+# If not provided, default to allowing all origins for convenience in development
+# (set ALLOWED_ORIGINS in production to a comma-separated list of allowed origins).
+raw_allowed = os.environ.get("ALLOWED_ORIGINS", "")
+if raw_allowed:
+    allowed_origins = raw_allowed.split(',')
+else:
+    allowed_origins = "*"
+
 socketio = SocketIO(cors_allowed_origins=allowed_origins, async_mode="threading")
 
 

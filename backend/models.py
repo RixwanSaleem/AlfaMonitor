@@ -1,4 +1,5 @@
 from datetime import datetime
+from uuid import uuid4
 from sqlalchemy import Boolean, Column, DateTime, Integer, String, Text, ForeignKey
 from sqlalchemy.orm import declarative_base, relationship
 
@@ -23,6 +24,7 @@ class Server(Base):
     password = Column(String(256), nullable=False)
     port = Column(Integer, default=22)
     enabled = Column(Boolean, default=True)
+    os_type = Column(String(128), nullable=True)
     updated_at = Column(DateTime, default=datetime.utcnow)
     metrics = relationship("Metric", back_populates="server", cascade="all, delete-orphan")
     alerts = relationship("Alert", back_populates="server", cascade="all, delete-orphan")
@@ -95,3 +97,30 @@ class SoftwareInstallation(Base):
     return_code = Column(Integer, nullable=True)
     created_at = Column(DateTime, default=datetime.utcnow)
     completed_at = Column(DateTime, nullable=True)
+
+
+class InstallerUpload(Base):
+    __tablename__ = "installer_uploads"
+    id = Column(Integer, primary_key=True)
+    filename = Column(String(256), nullable=False)
+    stored_filename = Column(String(512), nullable=False)
+    download_token = Column(String(64), unique=True, nullable=False, default=lambda: uuid4().hex)
+    description = Column(Text, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+
+
+class InstallerDeployment(Base):
+    __tablename__ = "installer_deployments"
+    id = Column(Integer, primary_key=True)
+    installer_id = Column(Integer, ForeignKey("installer_uploads.id"), nullable=False)
+    target_server_id = Column(Integer, ForeignKey("servers.id"), nullable=False)
+    server_ids = Column(Text, nullable=False)
+    install_args = Column(Text, nullable=True)
+    status = Column(String(32), default="pending")
+    output = Column(Text, nullable=True)
+    error = Column(Text, nullable=True)
+    return_code = Column(Integer, nullable=True)
+    created_at = Column(DateTime, default=datetime.utcnow)
+    completed_at = Column(DateTime, nullable=True)
+    installer = relationship("InstallerUpload")
+    server = relationship("Server")

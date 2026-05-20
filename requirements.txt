@@ -1,8 +1,8 @@
 Flask==2.3.3
+Werkzeug==2.3.8
 Flask-SocketIO==5.3.6
 eventlet==0.33.3
 SQLAlchemy==2.0.41
-passlib[bcrypt]==1.7.4
 requests==2.31.0
 psutil==5.9.5
 ansible-core>=2.15,<2.18

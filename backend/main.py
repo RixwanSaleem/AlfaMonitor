@@ -1,13 +1,48 @@
 import os
+import sys
 import json
 import socket
 import threading
 import time
 from datetime import datetime
+from uuid import uuid4
+
+from sqlalchemy import inspect, text
+
+ROOT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), '..'))
+sys.path.insert(0, ROOT_DIR)
+
 from flask import Flask, flash, redirect, render_template, request, session, url_for, jsonify, send_file
 from flask_socketio import emit
+from werkzeug.utils import secure_filename
 from backend.database import engine, SessionLocal
-from backend.models import Base, Server, Metric, Alert, PlaybookExecution, SoftwareInstallation, SoftwareTemplate
+from backend.models import (
+    Base,
+    Server,
+    Metric,
+    Alert,
+    PlaybookExecution,
+    SoftwareInstallation,
+    SoftwareTemplate,
+    InstallerUpload,
+    InstallerDeployment,
+)
+
+Base.metadata.create_all(bind=engine)
+
+# Ensure the server table has the os_type column for Windows/Linux agent detection
+try:
+    inspector = inspect(engine)
+    if 'servers' in inspector.get_table_names():
+        columns = [col['name'] for col in inspector.get_columns('servers')]
+        if 'os_type' not in columns:
+            with engine.connect() as conn:
+                conn.execute(text('ALTER TABLE servers ADD COLUMN os_type VARCHAR(128)'))
+                conn.commit()
+except Exception:
+    # If schema migration fails, continue; the new column may not be present yet.
+    pass
+
 from backend.auth import authenticate, login_required, create_admin_user
 from backend.alerting import send_alert, send_telegram, get_setting
 from backend.ansible_manager import run_playbook, run_command
@@ -15,7 +50,11 @@ from backend.package_manager import install_package, uninstall_package, list_ins
 from backend.crypto import encrypt_text, decrypt_text
 from backend.websocket import socketio
 
-Base.metadata.create_all(bind=engine)
+UPLOAD_FOLDER = os.path.abspath(os.path.join(os.path.dirname(__file__), '..', 'uploads', 'installers'))
+INSTALLER_DOWNLOAD_SECRET = os.environ.get("INSTALLER_DOWNLOAD_SECRET", "")
+AGENT_SECRET = os.environ.get("AGENT_SECRET", "")
+
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 
 def initialize_software_templates():
@@ -74,7 +113,22 @@ def get_telegram_notify_interval():
 
 
 app = Flask(__name__, template_folder="../templates", static_folder="../static")
-app.secret_key = os.environ.get("SECRET_KEY", "change-this-secret")
+# Prefer an explicitly provided SECRET_KEY; fall back to a randomly-generated key
+# when none is provided to avoid shipping a weak default in production.
+env_secret = os.environ.get("SECRET_KEY") or os.environ.get("SECRET")
+if env_secret:
+    app.secret_key = env_secret
+else:
+    # generate a temporary secret for local/dev use
+    app.secret_key = os.urandom(24).hex()
+
+# Warn the developer if the repository default is still being used via env
+if os.environ.get("SECRET_KEY", "") == "change-this-secret":
+    import warnings
+    warnings.warn("SECRET_KEY is set to the insecure default 'change-this-secret'. Set SECRET_KEY in environment for production.", UserWarning)
+
+# Ensure upload folder exists (defined earlier) — safe to call again
+os.makedirs(UPLOAD_FOLDER, exist_ok=True)
 
 # Initialize Socket.IO with explicit threading async mode so Engine.IO
 # doesn't attempt to load eventlet at import time under Gunicorn.
@@ -149,6 +203,10 @@ def start_periodic_status_worker():
 
 ADMIN_USER = os.environ.get("ADMIN_USER", "admin")
 ADMIN_PASSWORD = os.environ.get("ADMIN_PASSWORD", "password")
+# Warn if default admin credentials are still in use
+if ADMIN_USER == "admin" or ADMIN_PASSWORD == "password":
+    import warnings
+    warnings.warn("ADMIN_USER/ADMIN_PASSWORD are using insecure defaults. Set ADMIN_USER and ADMIN_PASSWORD in environment for production.", UserWarning)
 create_admin_user(ADMIN_USER, ADMIN_PASSWORD)
 initialize_software_templates()
 
@@ -186,16 +244,30 @@ def dashboard():
 def api_servers():
     db = SessionLocal()
     servers = db.query(Server).all()
-    payload = [
-        {
+    payload = []
+    from datetime import timedelta
+    for s in servers:
+        latest = db.query(Metric).filter(Metric.server_id == s.id).order_by(Metric.created_at.desc()).first()
+        status = "unknown"
+        last_seen = None
+        if latest:
+            last_seen = latest.created_at.isoformat()
+            age = datetime.utcnow() - latest.created_at
+            if age < timedelta(minutes=10):
+                status = "online"
+            else:
+                status = "stale"
+
+        payload.append({
             "id": s.id,
             "name": s.name,
             "host": s.host,
             "port": s.port,
             "enabled": s.enabled,
-        }
-        for s in servers
-    ]
+            "os_type": s.os_type or 'Unknown',
+            "status": status,
+            "last_seen": last_seen,
+        })
     db.close()
     return jsonify(payload)
 
@@ -300,10 +372,17 @@ def api_agent_report():
             username=data.get("username", "agent"),
             password="",
             port=int(data.get("port", 22)),
+            os_type=data.get("os"),
         )
         db.add(server)
         db.commit()
         db.refresh(server)
+    else:
+        os_type = data.get("os")
+        if os_type and os_type != server.os_type:
+            server.os_type = os_type
+            db.add(server)
+            db.commit()
     metric = Metric(
         server_id=server.id,
         cpu_percent=int(data.get("cpu_percent", 0)),
@@ -585,8 +664,8 @@ def api_users():
         db.close()
         return jsonify({'error': 'user exists'}), 400
     
-    from passlib.hash import bcrypt
-    user = User(username=username, password_hash=bcrypt.hash(password), is_admin=is_admin)
+    from werkzeug.security import generate_password_hash
+    user = User(username=username, password_hash=generate_password_hash(password), is_admin=is_admin)
     db.add(user)
     db.commit()
     db.close()
@@ -798,6 +877,225 @@ def api_software_install():
     return jsonify({"id": install_id, "status": "running", "message": f"Installing {package_name}..."})
 
 
+def _verify_installer_token(token):
+    # If a global secret is set, allow it for legacy compatibility
+    if INSTALLER_DOWNLOAD_SECRET and token == INSTALLER_DOWNLOAD_SECRET:
+        return True
+    # Otherwise, token verification is deferred to the download endpoint which
+    # compares against the installer-specific token stored in the database.
+    return False
+
+
+def _allowed_installer_filename(filename):
+    return filename.lower().endswith(('.exe', '.msi'))
+
+
+@app.route('/api/software/upload', methods=['POST'])
+@login_required
+def api_software_upload():
+    if 'installer' not in request.files:
+        return jsonify({'error': 'Installer file is required.'}), 400
+
+    installer_file = request.files['installer']
+    if installer_file.filename == '':
+        return jsonify({'error': 'Installer file name is required.'}), 400
+
+    if not _allowed_installer_filename(installer_file.filename):
+        return jsonify({'error': 'Only .exe and .msi files are supported.'}), 400
+
+    filename = secure_filename(installer_file.filename)
+    stored_filename = f"{uuid4().hex}_{filename}"
+    destination = os.path.join(UPLOAD_FOLDER, stored_filename)
+    installer_file.save(destination)
+
+    db = SessionLocal()
+    upload = InstallerUpload(
+        filename=filename,
+        stored_filename=stored_filename,
+        description=request.form.get('description', '').strip() or None,
+    )
+    db.add(upload)
+    db.commit()
+    db.refresh(upload)
+    db.close()
+
+    # Prefer a per-upload token to avoid leaking a global secret in generated URLs
+    token = getattr(upload, 'download_token', None)
+    if not token and INSTALLER_DOWNLOAD_SECRET:
+        token = INSTALLER_DOWNLOAD_SECRET
+    download_url = url_for('download_installer', installer_id=upload.id, _external=True)
+    if token:
+        download_url = f"{download_url}?token={token}"
+
+    return jsonify({
+        'id': upload.id,
+        'filename': upload.filename,
+        'download_url': download_url,
+    })
+
+
+@app.route('/api/software/install-custom', methods=['POST'])
+@login_required
+def api_software_install_custom():
+    body = request.json or {}
+    installer_id = body.get('installer_id')
+    server_ids = body.get('server_ids', [])
+    install_args = (body.get('install_args') or '').strip()
+
+    if not installer_id:
+        return jsonify({'error': 'installer_id is required'}), 400
+
+    if not isinstance(server_ids, list) or len(server_ids) == 0:
+        return jsonify({'error': 'At least one target server is required'}), 400
+
+    db = SessionLocal()
+    installer = db.query(InstallerUpload).filter(InstallerUpload.id == installer_id).first()
+    if not installer:
+        db.close()
+        return jsonify({'error': 'Installer not found'}), 404
+
+    servers = db.query(Server).filter(Server.id.in_(server_ids)).all()
+    if not servers:
+        db.close()
+        return jsonify({'error': 'No matching target servers found'}), 400
+
+    job_ids = []
+    current_time = datetime.utcnow()
+    for server in servers:
+        deployment = InstallerDeployment(
+            installer_id=installer.id,
+            target_server_id=server.id,
+            server_ids=json.dumps([server.id]),
+            install_args=install_args if install_args else None,
+            status='pending',
+            created_at=current_time,
+        )
+        db.add(deployment)
+        db.commit()
+        db.refresh(deployment)
+        job_ids.append(deployment.id)
+
+    db.close()
+    return jsonify({
+        'job_ids': job_ids,
+        'status': 'pending',
+        'message': f'Started {len(job_ids)} installer deployment job(s).',
+    })
+
+
+@app.route('/api/software/installers/<int:installer_id>')
+def download_installer(installer_id):
+    token = request.args.get('token', '')
+
+    db = SessionLocal()
+    installer = db.query(InstallerUpload).filter(InstallerUpload.id == installer_id).first()
+    if not installer:
+        db.close()
+        return jsonify({'error': 'Installer not found'}), 404
+
+    # Allow either the global secret or the per-upload token
+    if INSTALLER_DOWNLOAD_SECRET and token == INSTALLER_DOWNLOAD_SECRET:
+        authorized = True
+    else:
+        authorized = bool(token and getattr(installer, 'download_token', None) and token == installer.download_token)
+
+    if not authorized:
+        db.close()
+        return jsonify({'error': 'Unauthorized'}), 403
+
+    file_path = os.path.join(UPLOAD_FOLDER, installer.stored_filename)
+    db.close()
+    if not os.path.exists(file_path):
+        return jsonify({'error': 'Installer file missing'}), 404
+
+    return send_file(file_path, as_attachment=True, download_name=installer.filename)
+
+
+@app.route('/api/agent/jobs', methods=['GET'])
+def api_agent_jobs():
+    if AGENT_SECRET:
+        token = request.args.get('token', '')
+        if token != AGENT_SECRET:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+    host = request.args.get('host')
+    if not host:
+        return jsonify({'jobs': []}), 400
+
+    db = SessionLocal()
+    server = db.query(Server).filter(Server.host == host).first()
+    if not server:
+        db.close()
+        return jsonify({'jobs': []})
+
+    pending_jobs = db.query(InstallerDeployment).filter(InstallerDeployment.target_server_id == server.id, InstallerDeployment.status == 'pending').all()
+    jobs = []
+    for job in pending_jobs:
+        installer = job.installer
+        if not installer:
+            continue
+
+        # Use per-upload token when available
+        token = getattr(installer, 'download_token', None) or INSTALLER_DOWNLOAD_SECRET or ''
+        download_url = url_for('download_installer', installer_id=installer.id, _external=True)
+        if token:
+            download_url = f"{download_url}?token={token}"
+
+        jobs.append({
+            'job_id': job.id,
+            'installer_name': installer.filename,
+            'download_url': download_url,
+            'install_args': job.install_args or '',
+            'installer_ext': os.path.splitext(installer.filename)[1].lower(),
+        })
+        job.status = 'running'
+
+    db.commit()
+    db.close()
+    return jsonify({'jobs': jobs})
+
+
+@app.route('/api/agent/job-result', methods=['POST'])
+def api_agent_job_result():
+    if AGENT_SECRET:
+        token = request.json.get('token') if request.json else ''
+        if token != AGENT_SECRET:
+            return jsonify({'error': 'Unauthorized'}), 403
+
+    body = request.json or {}
+    job_id = body.get('job_id')
+    status = body.get('status')
+    output = body.get('output', '')
+    error = body.get('error', '')
+    return_code = body.get('return_code')
+
+    if not job_id or status not in ('success', 'failed'):
+        return jsonify({'error': 'job_id and valid status are required'}), 400
+
+    db = SessionLocal()
+    deployment = db.query(InstallerDeployment).filter(InstallerDeployment.id == job_id).first()
+    if not deployment:
+        db.close()
+        return jsonify({'error': 'Deployment job not found'}), 404
+
+    deployment.status = status
+    deployment.output = output
+    deployment.error = error
+    deployment.return_code = return_code
+    deployment.completed_at = datetime.utcnow()
+    db.add(deployment)
+    db.commit()
+    db.close()
+
+    socketio.emit('software_installation_complete', {
+        'id': deployment.id,
+        'status': deployment.status,
+        'package': deployment.installer.filename if deployment.installer else 'installer',
+    }, namespace='/')
+
+    return jsonify({'status': 'ok'})
+
+
 @app.route('/api/software/status/<int:job_id>', methods=['GET'])
 @login_required
 def api_software_status(job_id):
@@ -825,17 +1123,43 @@ def api_software_status(job_id):
 @login_required
 def api_software_history():
     db = SessionLocal()
-    installations = db.query(SoftwareInstallation).order_by(SoftwareInstallation.created_at.desc()).limit(50).all()
-    payload = [
-        {
-            "id": i.id,
+    package_installs = db.query(SoftwareInstallation).all()
+    custom_deployments = db.query(InstallerDeployment).all()
+
+    history_items = []
+    for i in package_installs:
+        history_items.append({
+            "id": f"pkg-{i.id}",
+            "type": "package",
             "package_name": i.package_name,
             "package_version": i.package_version,
             "status": i.status,
-            "created_at": i.created_at.isoformat() if i.created_at else None,
-            "completed_at": i.completed_at.isoformat() if i.completed_at else None,
+            "created_at": i.created_at,
+            "completed_at": i.completed_at,
+        })
+    for d in custom_deployments:
+        history_items.append({
+            "id": f"installer-{d.id}",
+            "type": "installer",
+            "package_name": d.installer.filename if d.installer else "custom installer",
+            "package_version": None,
+            "status": d.status,
+            "created_at": d.created_at,
+            "completed_at": d.completed_at,
+        })
+
+    history_items.sort(key=lambda item: item["created_at"] or datetime.min, reverse=True)
+    payload = [
+        {
+            "id": item["id"],
+            "type": item["type"],
+            "package_name": item["package_name"],
+            "package_version": item["package_version"],
+            "status": item["status"],
+            "created_at": item["created_at"].isoformat() if item["created_at"] else None,
+            "completed_at": item["completed_at"].isoformat() if item["completed_at"] else None,
         }
-        for i in installations
+        for item in history_items[:50]
     ]
     db.close()
     return jsonify(payload)
@@ -875,4 +1199,8 @@ if __name__ == "__main__":
     if os.environ.get("WERKZEUG_RUN_MAIN") != "false":
         start_periodic_alert_worker()
         start_periodic_status_worker()
-    socketio.run(app, host="0.0.0.0", port=int(os.environ.get("PORT", 5000)), debug=True)
+    # Control debug/bind via environment variables to avoid accidental exposure
+    debug_flag = parse_bool(os.environ.get("DEBUG", "false"))
+    host = os.environ.get("HOST", "127.0.0.1")
+    port = int(os.environ.get("PORT", 5000))
+    socketio.run(app, host=host, port=port, debug=debug_flag)

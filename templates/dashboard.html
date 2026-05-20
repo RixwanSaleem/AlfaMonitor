@@ -1479,7 +1479,7 @@
             <div class="tab-buttons" id="dashboard-tab-buttons">
               <button class="tab-btn active" data-tab="servers">Servers</button>
               <button class="tab-btn" data-tab="alerts">Alerts</button>
-              <button class="tab-btn" data-tab="software">Software</button>
+              <button class="tab-btn" data-tab="software">Installer Upload</button>
               <button class="tab-btn" data-tab="history">History</button>
               <button class="tab-btn" data-tab="notify">Notify</button>
               <button class="tab-btn" data-tab="users">Users</button>
@@ -1512,8 +1512,9 @@
                   <thead>
                     <tr>
                       <th style="width:32px;"></th>
-                      <th style="width:18%;">Server</th>
-                      <th style="width:20%;">Host</th>
+                      <th style="width:16%;">Server</th>
+                      <th style="width:18%;">Host</th>
+                      <th style="width:80px;">OS</th>
                       <th style="width:50px;">Port</th>
                       <th style="width:90px;">Status</th>
                       <th style="width:120px;">Action</th>
@@ -1521,10 +1522,11 @@
                   </thead>
                   <tbody id="server-table-body">
                     {% for server in servers %}
-                    <tr data-server-id="{{ server.id }}" data-server-host="{{ server.host }}">
+                    <tr data-server-id="{{ server.id }}" data-server-host="{{ server.host }}" data-server-os="{{ server.os_type or 'Unknown' }}">
                       <td><input type="checkbox" class="server-select" value="{{ server.id }}" /></td>
                       <td>{{ server.name }}</td>
                       <td>{{ server.host }}</td>
+                      <td>{{ server.os_type or 'Unknown' }}</td>
                       <td>{{ server.port }}</td>
                       <td><span class="status-indicator disconnected" title="Checking..."></span><span class="status-text">{{ "Checking..." if server.enabled else "Disabled" }}</span></td>
                       <td><button onclick="editServer({{ server.id }})">Edit</button></td>
@@ -1547,29 +1549,63 @@
 
             <div class="tab-pane" id="tab-software">
               <div class="section-toolbar">
-                <h3>Software Install</h3>
-                <button id="refresh-software-templates" class="control-btn" style="padding:6px 10px; font-size:0.85rem;">Refresh</button>
+                <h3>Installer Upload</h3>
               </div>
-              <div style="display:grid; gap:12px; font-size:0.9rem;">
-                <div>
-                  <label style="display:block; margin-bottom:6px; color:#8b949e; font-size:0.82rem;">Package Name</label>
-                  <input id="software-package-input" placeholder="e.g., 7zip, git, nodejs" style="padding:8px; font-size:0.85rem;" />
-                </div>
-                <div>
-                  <label style="display:block; margin-bottom:6px; color:#8b949e; font-size:0.82rem;">Version (optional)</label>
-                  <input id="software-version-input" placeholder="e.g., 18.0.0" style="padding:8px; font-size:0.85rem;" />
-                </div>
-                <button id="install-package-btn" class="control-btn" style="background:#2f80ed; padding:8px 12px; font-size:0.9rem;">Install Package</button>
+              <div style="margin-top:8px; padding:12px; border-radius:10px; border:1px solid rgba(250,204,21,0.18); background:rgba(250,204,21,0.12); color:#92400e; font-size:0.88rem;">
+                <strong>Windows installer note:</strong> Custom Windows installers require the agent to run with administrator privileges. Use a Windows service or a scheduled task configured with "Run with highest privileges" to avoid UAC prompts during unattended deployment.
               </div>
               <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
-                <h4 style="margin:0 0 8px 0; color:#f8fafd; font-size:0.9rem;">Popular Packages</h4>
-                <div id="software-templates-list" style="display:grid; gap:6px; max-height:180px; overflow-y:auto;">
-                  <div style="text-align:center; color:#8b949e; font-size:0.85rem;">Loading templates...</div>
+                <div style="display:grid; gap:10px; font-size:0.9rem;">
+                  <div>
+                    <label style="display:block; margin-bottom:6px; color:#8b949e; font-size:0.82rem;">Upload .exe or .msi</label>
+                    <input id="installer-file-input" type="file" accept=".exe,.msi" style="padding:8px; font-size:0.85rem;" />
+                  </div>
+                  <div>
+                    <label style="display:block; margin-bottom:6px; color:#8b949e; font-size:0.82rem;">Target Server(s)</label>
+                    <div id="installer-server-list" style="display:grid; gap:6px; max-height:200px; overflow-y:auto; padding:8px; border:1px solid rgba(148,163,184,0.2); border-radius:8px; background:rgba(255,255,255,0.03);"></div>
+                    <div id="installer-server-empty" style="margin-top:8px; color:#94a3b8; font-size:0.85rem;">No servers available. Add servers on the Servers tab.</div>
+                  </div>
+                  <div>
+                    <label style="display:block; margin-bottom:6px; color:#8b949e; font-size:0.82rem;">Install arguments (optional)</label>
+                    <input id="installer-args-input" placeholder="/quiet /norestart" style="padding:8px; font-size:0.85rem;" />
+                  </div>
+                  <button id="install-installer-btn" class="control-btn" style="background:#16a34a; padding:8px 12px; font-size:0.9rem;">Upload & Install</button>
+                  <div id="installer-status" style="color:#9fbcff; font-size:0.85rem; min-height:1.2rem;"></div>
+                </div>
+              </div>
+              <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+                <h4 style="margin:0 0 8px 0; color:#f8fafd; font-size:0.9rem;">Windows Package Install</h4>
+                <div style="display:grid; gap:10px; font-size:0.9rem;">
+                  <div>
+                    <label style="display:block; margin-bottom:6px; color:#8b949e; font-size:0.82rem;">Package name</label>
+                    <input id="package-name-input" placeholder="7zip" style="padding:8px; font-size:0.85rem; width:100%;" />
+                  </div>
+                  <div>
+                    <label style="display:block; margin-bottom:6px; color:#8b949e; font-size:0.82rem;">Version (optional)</label>
+                    <input id="package-version-input" placeholder="18.0.0" style="padding:8px; font-size:0.85rem; width:100%;" />
+                  </div>
+                  <button id="install-package-btn" class="control-btn" style="background:#2f80ed; padding:8px 12px; font-size:0.9rem;">Install Chocolatey Package</button>
+                  <div id="package-install-status" style="color:#9fbcff; font-size:0.85rem; min-height:1.2rem;"></div>
+                </div>
+              </div>
+              <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+                <h4 style="margin:0 0 8px 0; color:#f8fafd; font-size:0.9rem;">Deployment Summary</h4>
+                <div id="installer-summary" style="display:grid; gap:8px; grid-template-columns:repeat(2, minmax(0, 1fr)); font-size:0.8rem;">
+                  <div style="padding:10px; background:rgba(88,166,255,0.08); border-radius:10px; color:#cbd5e1;">Pending:<br/><strong id="summary-pending">0</strong></div>
+                  <div style="padding:10px; background:rgba(16,185,129,0.08); border-radius:10px; color:#cbd5e1;">Running:<br/><strong id="summary-running">0</strong></div>
+                  <div style="padding:10px; background:rgba(34,197,94,0.08); border-radius:10px; color:#cbd5e1;">Success:<br/><strong id="summary-success">0</strong></div>
+                  <div style="padding:10px; background:rgba(239,68,68,0.08); border-radius:10px; color:#cbd5e1;">Failed:<br/><strong id="summary-failed">0</strong></div>
+                </div>
+              </div>
+              <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
+                <h4 style="margin:0 0 8px 0; color:#f8fafd; font-size:0.9rem;">Active Deployment Jobs</h4>
+                <div id="installer-jobs-list" style="display:grid; gap:6px; max-height:160px; overflow-y:auto; font-size:0.8rem;">
+                  <div style="text-align:center; color:#8b949e;">No active deployment jobs</div>
                 </div>
               </div>
               <div style="margin-top:12px; border-top:1px solid rgba(255,255,255,0.08); padding-top:12px;">
                 <h4 style="margin:0 0 8px 0; color:#f8fafd; font-size:0.9rem;">Recent Installations</h4>
-                <div id="software-history-list" style="display:grid; gap:6px; max-height:150px; overflow-y:auto; font-size:0.8rem;">
+                <div id="installer-history-list" style="display:grid; gap:6px; max-height:150px; overflow-y:auto; font-size:0.8rem;">
                   <div style="text-align:center; color:#8b949e;">No history yet</div>
                 </div>
               </div>
