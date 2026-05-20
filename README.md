@@ -219,6 +219,7 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 ```
+## Nginx
 
 nano /etc/nginx/conf.d/monitoring-dashboard.conf
 server {
