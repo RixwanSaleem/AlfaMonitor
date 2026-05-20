@@ -251,6 +251,26 @@ sudo systemctl restart nginx
 sudo systemctl restart monitoring-dashboard
 ```
 
+## Important
+
+- If Password incorrect 
+cd /opt/panel/monitoring-dashboard
+source venv/bin/activate
+python3
+
+import sqlite3
+from backend.auth import create_admin_user
+
+conn = sqlite3.connect('monitoring.db')
+cursor = conn.cursor()
+cursor.execute("DELETE FROM users WHERE username='admin';")
+conn.commit()
+conn.close()
+
+create_admin_user('admin', 'New_Password')
+print("Successfully generated and hashed admin user profile via native auth!")
+exit()
+
 ## Agent Installation
 
 ### Linux agent
@@ -321,25 +341,6 @@ For support, open an issue with: malik.chand@hotmail.com
 - Secure credentials and secret keys carefully.
 - Configure firewalls and network access for the dashboard and remote agents.
 
-## Important
-- If Password incorrect 
-cd /opt/panel/monitoring-dashboard
-source venv/bin/activate
-python3
 
-import sqlite3
-from backend.auth import create_admin_user
-
-# 1. Clear out any broken admin records first
-conn = sqlite3.connect('monitoring.db')
-cursor = conn.cursor()
-cursor.execute("DELETE FROM users WHERE username='admin';")
-conn.commit()
-conn.close()
-
-# 2. Use your native application function to cleanly hash and save the admin profile
-create_admin_user('admin', 'New_Password')
-print("Successfully generated and hashed admin user profile via native auth!")
-exit()
 
 
