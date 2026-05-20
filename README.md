@@ -86,15 +86,23 @@ On Rocky/Fedora:
 
 ```bash
 sudo dnf install -y epel-release
-sudo dnf install -y python3 python3-devel python3-virtualenv python3-pip gcc openssl-devel libffi-devel make git
+sudo dnf install -y python3 python3-devel python3-virtualenv python3-pip gcc openssl-devel libffi-devel make git dnf install python3 python3-pip python3-devel gcc nginx augeas-libs -y
 ```
 
-On CentOS 7:
+On CentOS 8:
 
 ```bash
-sudo yum install -y epel-release
+sudo yum install -y epel-release firewalld
 sudo yum install -y python3 python3-devel python3-virtualenv python3-pip gcc openssl-devel libffi-devel make git
 ```
+## Firewall 
+
+sudo systemctl enable firewalld --now
+sudo firewall-cmd --permanent --add-service=http
+sudo firewall-cmd --permanent --add-service=https
+sudo firewall-cmd --permanent --add-port=443/tcp
+sudo firewall-cmd --reload
+
 
 ### Python requirements
 
@@ -134,14 +142,15 @@ pip install -r requirements.txt
 
 4. Configure environment variables:
 
+nano /opt/panel/monitoring-dashboard/.env
 ```bash
-export SECRET_KEY="replace-with-secret"
-export ADMIN_USER="admin"
-export ADMIN_PASSWORD="password"
-export TELEGRAM_TOKEN="your-telegram-token"
-export TELEGRAM_CHAT_ID="your-chat-id"
-export DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
-export TELEGRAM_NOTIFY_INTERVAL="300"
+SECRET_KEY="replace-with-secret"
+ADMIN_USER="admin"
+ADMIN_PASSWORD="password"
+TELEGRAM_TOKEN="your-telegram-token"
+TELEGRAM_CHAT_ID="your-chat-id"
+DISCORD_WEBHOOK_URL="https://discord.com/api/webhooks/..."
+TELEGRAM_NOTIFY_INTERVAL="300"
 ```
 
 5. (Optional) copy example environment file:
@@ -181,39 +190,64 @@ http://0.0.0.0:5000
 
 ## Create a systemd Service
 
-Create `/etc/systemd/system/alfamonitor.service` with the following content:
+Create `/etc/systemd/system/monitoring-dashboard.service` with the following content:
 
 ```ini
 [Unit]
-Description=AlfaMonitor Dashboard
+Description=Monitoring Dashboard
 After=network.target
 
 [Service]
+Environment=ADMIN_USER=admin
+Environment=ADMIN_PASSWORD=Password
 Type=simple
-User=youruser
-WorkingDirectory=/path/to/AlfaMonitor
-Environment="PATH=/path/to/AlfaMonitor/venv/bin"
-Environment="SECRET_KEY=replace-with-secret"
-Environment="ADMIN_USER=admin"
-Environment="ADMIN_PASSWORD=password"
-Environment="TELEGRAM_TOKEN=your-telegram-token"
-Environment="TELEGRAM_CHAT_ID=your-chat-id"
-Environment="DISCORD_WEBHOOK_URL=https://discord.com/api/webhooks/..."
-ExecStart=/path/to/AlfaMonitor/venv/bin/python backend/main.py
+User=root
+WorkingDirectory=/opt/panel/monitoring-dashboard
+Environment="PATH=/opt/panel/monitoring-dashboard/venv/bin"
+EnvironmentFile=/opt/panel/monitoring-dashboard/.env
+ExecStart=/opt/panel/monitoring-dashboard/venv/bin/gunicorn \
+    --workers 4 \
+    --worker-class gthread --threads 4 \
+    --bind 127.0.0.1:5000 \
+    --access-logfile /var/log/monitoring-dashboard/access.log \
+    --error-logfile /var/log/monitoring-dashboard/error.log \
+    backend.main:app
+
 Restart=always
-RestartSec=5
+RestartSec=10
 
 [Install]
 WantedBy=multi-user.target
 ```
 
+nano /etc/nginx/conf.d/monitoring-dashboard.conf
+server {
+    listen 80;
+    server_name alfasolution.org; # Replace with your domain or server IP
+
+    # Handle static assets directly via Nginx for speed
+    location /static/ {
+        alias /opt/panel/monitoring-dashboard/static/;
+    }
+
+    # Pass all other traffic to Gunicorn
+    location / {
+        proxy_pass http://127.0.0.1:5000;
+        proxy_set_header Host $host;
+        proxy_set_header X-Real-IP $remote_addr;
+        proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto $scheme;
+    }
+}
+
+
+
 Then enable and start it:
 
 ```bash
-sudo systemctl daemon-reload
-sudo systemctl enable alfamonitor
-sudo systemctl start alfamonitor
-sudo systemctl status alfamonitor
+sudo systemctl enable nginx --now
+sudo systemctl restart nginx
+sudo systemctl restart monitoring-dashboard
 ```
 
 ## Agent Installation
