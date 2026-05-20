@@ -2,8 +2,8 @@
 
 ## Example Pictures
 <p>
-<img src="assets/Dashboard.png" width="30%"/>
-<img src="assets/Alfa-Dashboard.png" width="30%"/>
+<img src="assets/Dashboard.png" width="40%"/>
+<img src="assets/Alfa-Dashboard.png" width="40%"/>
 
 AlfaMonitor is a Python-based monitoring dashboard for Linux and Windows servers. It provides live metrics, alerting, and Ansible integration through a Flask backend and lightweight agent.
 
