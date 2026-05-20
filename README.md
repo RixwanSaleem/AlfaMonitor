@@ -17,6 +17,7 @@ AlfaMonitor includes a centralized dashboard to monitor server CPU, RAM, disk, t
 - Server health metrics: CPU, RAM, disk, temperature, network, and services
 - Telegram and Discord alerting
 - Cross-platform agent support for Linux and Windows
+- Windows agent packaging support for one-file executable builds
 - Ansible playbook execution from the UI
 - Admin login and user management
 - Configurable periodic Telegram status notifications
@@ -290,6 +291,23 @@ pip install psutil requests
 python agent.py --host YOUR_DASHBOARD_HOST --username agent --port 3389
 ```
 
+### Build a Windows executable package
+
+If you want a simple double-click deployment package, use the included Windows packaging helper.
+
+1. Open PowerShell as Administrator in the repository root.
+2. Run:
+
+```powershell
+powershell -ExecutionPolicy Bypass -File .\static\windows_agent_build.ps1
+```
+
+3. The build creates `dist\AlfaMonitorAgent.exe`.
+4. Copy `dist\AlfaMonitorAgent.exe` to the Windows target machine.
+5. Run the executable as Administrator, or install it as a Windows service / scheduled task with "Run with highest privileges" for unattended operation.
+
+> Note: The built executable is the easiest way to run the Windows agent with admin privileges for dashboard-driven installer jobs.
+
 ### Scheduling agent execution
 
 #### Linux cron example
@@ -340,7 +358,3 @@ For support, open an issue with: malik.chand@hotmail.com
 - Use HTTPS or a reverse proxy for production deployments.
 - Secure credentials and secret keys carefully.
 - Configure firewalls and network access for the dashboard and remote agents.
-
-
-
-
