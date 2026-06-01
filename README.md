@@ -129,6 +129,9 @@ sudo firewall-cmd --reload
 
 ## Installation
 
+Create project environment Directory 
+/opt/panel/monitoring-dashboard
+
 1. Clone the repository:
 
 ```bash
