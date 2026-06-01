@@ -111,6 +111,8 @@ sudo systemctl enable firewalld --now
 sudo firewall-cmd --permanent --add-service=http
 sudo firewall-cmd --permanent --add-service=https
 sudo firewall-cmd --permanent --add-port=443/tcp
+sudo firewall-cmd --permanent --add-port=8445/tcp
+sudo firewall-cmd --permanent --add-port=5000/tcp
 sudo firewall-cmd --reload
 ```
 
