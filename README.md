@@ -18,6 +18,7 @@ AlfaMonitor includes a centralized dashboard to monitor server CPU, RAM, disk, t
 - Telegram and Discord alerting
 - Cross-platform agent support for Linux and Windows
 - Windows agent packaging support for one-file executable builds
+- Install & uninstall window packages
 - Ansible playbook execution from the UI
 - Admin login and user management
 - Configurable periodic Telegram status notifications
