@@ -373,3 +373,4 @@ For support, open an issue with: malik.chand@hotmail.com
 - Use HTTPS or a reverse proxy for production deployments.
 - Secure credentials and secret keys carefully.
 - Configure firewalls and network access for the dashboard and remote agents.
+- This project is configured to run as the root user, but it can also be executed using a non-root user.
