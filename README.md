@@ -431,10 +431,20 @@ If AlfaMonitor helps you monitor your infrastructure, consider supporting its de
 
 If you want to follow my work, collaborate on projects, or get in touch, let's connect!
 
-* 💼 **LinkedIn:** [Connect on LinkedIn](https://linkedin.com)
-* 🐦 **X / Twitter:** [Follow on X.com](https://x.com)
-* 📘 **Facebook:** [Connect on Facebook](https://facebook.com)
-* 💻 **GitHub:** [Follow on 
+<p align="left">
+  <a href="https://www.linkedin.com/in/rizwan-saleem-7b300068/" target="_blank">
+    <img src="https://flaticon.com" alt="LinkedIn" width="40" height="40" style="margin-right: 10px;"/>
+  </a>
+  <a href="https://x.com/linuxgen" target="_blank">
+    <img src="https://flaticon.com" alt="X / Twitter" width="40" height="40" style="margin-right: 10px;"/>
+  </a>
+  <a href="https://www.facebook.com/mRizwanSalem" target="_blank">
+    <img src="https://flaticon.com" alt="Facebook" width="40" height="40" style="margin-right: 10px;"/>
+  </a>
+  <a href="https://github.com" target="_blank">
+    <img src="https://flaticon.com" alt="GitHub" width="40" height="40"/>
+  </a>
+</p>
 
 ## Credits & Authors
 
