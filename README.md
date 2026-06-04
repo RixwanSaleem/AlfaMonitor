@@ -234,12 +234,11 @@ RestartSec=10
 [Install]
 WantedBy=multi-user.target
 ```
-## Nginx
-## nano /etc/nginx/conf.d/monitoring-dashboard.conf
+## Nginx /etc/nginx/conf.d/monitoring-dashboard.conf
 
 server {
     listen 80;
-    server_name alfasolution.org; # Replace with your domain or server IP
+    server_name yourdomain.com; # Replace with your domain or server IP
 
     # Handle static assets directly via Nginx for speed
     location /static/ {
