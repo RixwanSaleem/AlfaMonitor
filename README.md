@@ -467,4 +467,4 @@ If you want to follow my work, collaborate on projects, or get in touch, let's c
 
 - **Lead Developer & Maintainer**: Rizwan Saleem
 - **Email Contact & Support**: info@alfasolution.org / malik.chand@hotmail.com
-- **Project URL**: [GitHub Repository](https://github.com)
+- **Project URL**: [GitHub Repository](https://github.com/RixwanSaleem)
