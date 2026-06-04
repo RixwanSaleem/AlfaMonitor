@@ -1,4 +1,11 @@
 # AlfaMonitor
+# AlfaMonitor
+
+![License](https://img.shields.io/badge/License-MIT-yellow.svg)
+![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)
+![Platform](https://img.shields.io/badge/Platform-Linux%20%7C%20Windows-green.svg)
+
+**A modern Python-based monitoring dashboard** ...
 <p align="left">
   <a href="https://www.linkedin.com/in/rizwan-saleem-7b300068/" target="_blank">
     <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white&labelColor=0A66C2" height="32" alt="LinkedIn"/>
