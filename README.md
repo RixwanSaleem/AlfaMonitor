@@ -422,13 +422,13 @@ For direct support, open a public tracking issue containing:
 
 ## Support & Donations
 
-If **AlfaMonitor** helps you monitor your infrastructure, consider supporting its development!
+If **AlfaMonitor** helps you monitor your infrastructure, consider supporting its development! ❤️
 
 <p align="left">
-  <a href="https://ko-fi.com/" target="_blank">
+  <a href="https://ko-fi.com/rizwansaleem" target="_blank">
     <img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Support me on Ko-fi"/>
   </a>
-  <a href="https://paypal.com/" target="_blank">
+  <a href="https://www.paypal.com/paypalme/Malikchand" target="_blank">
     <img src="https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal"/>
   </a>
 </p>
