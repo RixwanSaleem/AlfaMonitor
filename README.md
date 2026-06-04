@@ -96,6 +96,13 @@ On Rocky/Fedora:
 sudo dnf install -y epel-release
 sudo dnf install -y python3 python3-devel python3-virtualenv python3-pip gcc openssl-devel libffi-devel make git dnf install python3 python3-pip python3-devel gcc nginx augeas-libs -y
 ```
+## If repository error 
+
+ 1. Enable the CodeReady Linux Builder repository
+dnf config-manager --set-enabled crb
+
+# 2. Re-run your streamlined installation list
+dnf install -y python3 python3-devel python3-virtualenv python3-pip gcc openssl-devel libffi-devel make git nginx augeas-libs
 
 On CentOS 8:
 
