@@ -435,22 +435,22 @@ If **AlfaMonitor** helps you monitor your infrastructure, consider supporting it
 
 ## Connect With Me
 
-If you want to follow my work, collaborate on projects, or get in touch, let's connect! 👋
+Let's connect! 👋
 
-<p align="left">
+<div align="left" style="display: flex; gap: 12px; margin-top: 12px;">
   <a href="https://www.linkedin.com/in/rizwan-saleem-7b300068/" target="_blank">
-    <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white&labelColor=0A66C2" height="32" alt="LinkedIn"/>
+    <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="42" height="42" alt="LinkedIn"/>
   </a>
   <a href="https://x.com/linuxgen" target="_blank">
-    <img src="https://img.shields.io/badge/X-000000?style=flat&logo=x&logoColor=white&labelColor=000000" height="32" alt="X"/>
+    <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="42" height="42" alt="X"/>
   </a>
   <a href="https://www.facebook.com/mRizwanSalem" target="_blank">
-    <img src="https://img.shields.io/badge/Facebook-1877F2?style=flat&logo=facebook&logoColor=white&labelColor=1877F2" height="32" alt="Facebook"/>
+    <img src="https://cdn-icons-png.flaticon.com/512/174/174848.png" width="42" height="42" alt="Facebook"/>
   </a>
   <a href="https://github.com/RixwanSaleem" target="_blank">
-    <img src="https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white&labelColor=181717" height="32" alt="GitHub"/>
+    <img src="https://cdn-icons-png.flaticon.com/512/733/733553.png" width="42" height="42" alt="GitHub"/>
   </a>
-</p>
+</div>
 
 ## Credits & Authors
 
