@@ -427,6 +427,15 @@ If AlfaMonitor helps you monitor your infrastructure, consider supporting its de
 [![Support me on Ko-fi](https://shields.io)](https://ko-fi.com)
 [![Donate via PayPal](https://shields.io)](https://paypal.com)
 
+## Connect With Me
+
+If you want to follow my work, collaborate on projects, or get in touch, let's connect!
+
+[![LinkedIn](https://shields.io)](https://www.linkedin.com/in/rizwan-saleem-7b300068/)
+[![X / Twitter](https://shields.io)](https://x.com/linuxgen)
+[![Facebook](https://shields.io)](https://www.facebook.com/mRizwanSalem)
+[![GitHub](https://shields.io)](https://github.com)
+
 
 ## Credits & Authors
 
