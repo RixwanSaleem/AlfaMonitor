@@ -6,18 +6,7 @@
 
 **A modern Python-based monitoring dashboard** for Linux and Windows servers with live metrics, real-time alerting (Telegram + Discord), and Ansible integration.
 
-## Example Pictures
-
-<p align="center">
-  <img src="assets/Dashboard.png" width="49%" alt="Main Dashboard"/>
-  <img src="assets/Alfa-Dashboard.png" width="49%" alt="Alfa Dashboard"/>
-</p>
-
-<p align="center">
-  <img src="assets/AdminLogin.png" width="49%" alt="Admin Login"/>
-</p>
-
-## Example Pictures
+## Screenshots 
 <p>
 <img src="assets/Dashboard.png" width="40%"/>
 <img src="assets/Alfa-Dashboard.png" width="40%"/>
