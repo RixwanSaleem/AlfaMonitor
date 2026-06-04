@@ -424,4 +424,4 @@ For direct support, open a public tracking issue containing:
 
 - **Lead Developer & Maintainer**: Rizwan Saleem
 - **Email Contact & Support**: info@alfasolution.org / malik.chand@hotmail.com
-- **Project URL**: [GitHub Repository]([https://github.com/RixwanSaleem/AlfaMonitor))
+- **Project URL**: [GitHub Repository](https://github.com)
