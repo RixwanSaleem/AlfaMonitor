@@ -426,22 +426,31 @@ If **AlfaMonitor** helps you monitor your infrastructure, consider supporting it
 
 <p align="left">
   <a href="https://ko-fi.com/rizwansaleem" target="_blank">
-    <img src="https://img.shields.io/badge/Ko--fi-F16061?style=for-the-badge&logo=ko-fi&logoColor=white" alt="Support me on Ko-fi"/>
+    <img src="https://img.shields.io/badge/Ko--fi-F16061?style=flat&logo=ko-fi&logoColor=white&labelColor=F16061" height="32" alt="Support me on Ko-fi"/>
   </a>
   <a href="https://www.paypal.com/paypalme/Malikchand" target="_blank">
-    <img src="https://img.shields.io/badge/PayPal-00457C?style=for-the-badge&logo=paypal&logoColor=white" alt="Donate via PayPal"/>
+    <img src="https://img.shields.io/badge/PayPal-00457C?style=flat&logo=paypal&logoColor=white&labelColor=00457C" height="32" alt="Donate via PayPal"/>
   </a>
 </p>
 
 ## Connect With Me
 
-Let's connect! 👋
+If you want to follow my work, collaborate on projects, or get in touch, let's connect! 👋
 
-- [LinkedIn](https://www.linkedin.com/in/rizwan-saleem-7b300068/)  
-- [𝕏 / Twitter](https://x.com/linuxgen)  
-- [Facebook](https://www.facebook.com/mRizwanSalem)  
-- [GitHub](https://github.com/RixwanSaleem)
-
+<p align="left">
+  <a href="https://www.linkedin.com/in/rizwan-saleem-7b300068/" target="_blank">
+    <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white&labelColor=0A66C2" height="32" alt="LinkedIn"/>
+  </a>
+  <a href="https://x.com/linuxgen" target="_blank">
+    <img src="https://img.shields.io/badge/X-000000?style=flat&logo=x&logoColor=white&labelColor=000000" height="32" alt="X"/>
+  </a>
+  <a href="https://www.facebook.com/mRizwanSalem" target="_blank">
+    <img src="https://img.shields.io/badge/Facebook-1877F2?style=flat&logo=facebook&logoColor=white&labelColor=1877F2" height="32" alt="Facebook"/>
+  </a>
+  <a href="https://github.com/RixwanSaleem" target="_blank">
+    <img src="https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white&labelColor=181717" height="32" alt="GitHub"/>
+  </a>
+</p>
 ## Credits & Authors
 
 - **Lead Developer & Maintainer**: Rizwan Saleem
