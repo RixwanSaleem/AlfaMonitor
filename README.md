@@ -6,7 +6,7 @@
 
 **A modern Python-based monitoring dashboard** for Linux and Windows servers with live metrics, real-time alerting (Telegram + Discord), and Ansible integration.
 
-## Screenshots
+## Main view
 
 <p align="center">
   <img src="assets/Dashboard.png" width="48%" alt="Main Dashboard" style="border-radius: 8px;"/>
