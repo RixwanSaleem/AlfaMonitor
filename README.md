@@ -435,20 +435,20 @@ If **AlfaMonitor** helps you monitor your infrastructure, consider supporting it
 
 ## Connect With Me
 
-If you want to follow my work, collaborate on projects, or get in touch, let's connect!
+If you want to follow my work, collaborate on projects, or get in touch, let's connect! 👋
 
 <p align="left">
   <a href="https://www.linkedin.com/in/rizwan-saleem-7b300068/" target="_blank">
-    <img src="https://img.shields.io/badge/LinkedIn-0077B5?style=for-the-badge&logo=linkedin&logoColor=white" alt="LinkedIn"/>
+    <img src="https://img.shields.io/badge/LinkedIn-0A66C2?style=flat&logo=linkedin&logoColor=white&labelColor=0A66C2" height="32" alt="LinkedIn"/>
   </a>
   <a href="https://x.com/linuxgen" target="_blank">
-    <img src="https://img.shields.io/badge/X-000000?style=for-the-badge&logo=x&logoColor=white" alt="X / Twitter"/>
+    <img src="https://img.shields.io/badge/X-000000?style=flat&logo=x&logoColor=white&labelColor=000000" height="32" alt="X"/>
   </a>
   <a href="https://www.facebook.com/mRizwanSalem" target="_blank">
-    <img src="https://img.shields.io/badge/Facebook-1877F2?style=for-the-badge&logo=facebook&logoColor=white" alt="Facebook"/>
+    <img src="https://img.shields.io/badge/Facebook-1877F2?style=flat&logo=facebook&logoColor=white&labelColor=1877F2" height="32" alt="Facebook"/>
   </a>
-  <a href="https://github.com/linuxgen" target="_blank">
-    <img src="https://img.shields.io/badge/GitHub-181717?style=for-the-badge&logo=github&logoColor=white" alt="GitHub"/>
+  <a href="https://github.com/RixwanSaleem" target="_blank">
+    <img src="https://img.shields.io/badge/GitHub-181717?style=flat&logo=github&logoColor=white&labelColor=181717" height="32" alt="GitHub"/>
   </a>
 </p>
 
