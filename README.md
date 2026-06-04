@@ -17,6 +17,7 @@
   <img src="assets/AdminLogin.png" width="48%" alt="Admin Login" style="border-radius: 8px;"/>
 </p>
 
+
 AlfaMonitor is a Python-based monitoring dashboard for Linux and Windows servers. It provides live metrics, alerting, and Ansible integration through a Flask backend and lightweight agent.
 
 ## Project Overview
@@ -437,12 +438,13 @@ If **AlfaMonitor** helps you monitor your infrastructure, consider supporting it
 
 <p align="left">
   <a href="https://ko-fi.com/rizwansaleem" target="_blank">
-    <img src="https://img.shields.io/badge/Ko--fi-F16061?style=flat&logo=ko-fi&logoColor=white&labelColor=F16061" height="32" alt="Support me on Ko-fi"/>
+    <img src="https://img.shields.io/badge/Ko--fi-F16061?style=flat&logo=ko-fi&logoColor=white&labelColor=F16061" height="32" alt="Ko-fi"/>
   </a>
   <a href="https://www.paypal.com/paypalme/Malikchand" target="_blank">
-    <img src="https://img.shields.io/badge/PayPal-00457C?style=flat&logo=paypal&logoColor=white&labelColor=00457C" height="32" alt="Donate via PayPal"/>
+    <img src="https://img.shields.io/badge/PayPal-00457C?style=flat&logo=paypal&logoColor=white&labelColor=00457C" height="32" alt="PayPal"/>
   </a>
 </p>
+
 
 ## Connect With Me
 
