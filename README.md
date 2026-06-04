@@ -420,12 +420,12 @@ For direct support, open a public tracking issue containing:
 - Configure system firewalls and precise network security groups to control dashboard and remote agent connectivity paths.
 - This project is fundamentally configured to run under the root profile context, but can easily be modified to execute using standard unprivileged system accounts.
 
+
 ## Support & Donations
 
 If AlfaMonitor helps you manage and monitor your infrastructure easily, consider supporting its development!
 
 [![Support me on Ko-fi](https://shields.io)](https://ko-fi.com)
-
 
 ## Credits & Authors
 
