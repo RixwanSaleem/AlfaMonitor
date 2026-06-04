@@ -431,9 +431,9 @@ If AlfaMonitor helps you monitor your infrastructure, consider supporting its de
 
 If you want to follow my work, collaborate on projects, or get in touch, let's connect!
 
-[![LinkedIn](https://shields.io)](https://www.linkedin.com/in/rizwan-saleem-7b300068/)
-[![X / Twitter](https://shields.io)](https://x.com/linuxgen)
-[![Facebook](https://shields.io)](https://www.facebook.com/mRizwanSalem)
+[![LinkedIn](https://shields.io)](https://linkedin.com)
+[![X / Twitter](https://shields.io)](https://x.com)
+[![Facebook](https://shields.io)](https://facebook.com)
 [![GitHub](https://shields.io)](https://github.com)
 
 
