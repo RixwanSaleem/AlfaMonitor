@@ -235,8 +235,7 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 ## Nginx
-nano /etc/nginx/conf.d/monitoring-dashboard.conf
-
+## nano /etc/nginx/conf.d/monitoring-dashboard.conf
 
 server {
     listen 80;
