@@ -431,11 +431,10 @@ If AlfaMonitor helps you monitor your infrastructure, consider supporting its de
 
 If you want to follow my work, collaborate on projects, or get in touch, let's connect!
 
-[![LinkedIn](https://shields.io)](https://linkedin.com)
-[![X / Twitter](https://shields.io)](https://x.com)
-[![Facebook](https://shields.io)](https://facebook.com)
-[![GitHub](https://shields.io)](https://github.com)
-
+* 💼 **LinkedIn:** [Connect on LinkedIn](https://linkedin.com)
+* 🐦 **X / Twitter:** [Follow on X.com](https://x.com)
+* 📘 **Facebook:** [Connect on Facebook](https://facebook.com)
+* 💻 **GitHub:** [Follow on 
 
 ## Credits & Authors
 
