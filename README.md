@@ -437,20 +437,10 @@ If **AlfaMonitor** helps you monitor your infrastructure, consider supporting it
 
 Let's connect! 👋
 
-<div align="left" style="display: flex; gap: 12px; margin-top: 12px;">
-  <a href="https://www.linkedin.com/in/rizwan-saleem-7b300068/" target="_blank">
-    <img src="https://cdn-icons-png.flaticon.com/512/174/174857.png" width="42" height="42" alt="LinkedIn"/>
-  </a>
-  <a href="https://x.com/linuxgen" target="_blank">
-    <img src="https://cdn-icons-png.flaticon.com/512/733/733579.png" width="42" height="42" alt="X"/>
-  </a>
-  <a href="https://www.facebook.com/mRizwanSalem" target="_blank">
-    <img src="https://cdn-icons-png.flaticon.com/512/174/174848.png" width="42" height="42" alt="Facebook"/>
-  </a>
-  <a href="https://github.com/RixwanSaleem" target="_blank">
-    <img src="https://cdn-icons-png.flaticon.com/512/733/733553.png" width="42" height="42" alt="GitHub"/>
-  </a>
-</div>
+- [LinkedIn](https://www.linkedin.com/in/rizwan-saleem-7b300068/)  
+- [𝕏 / Twitter](https://x.com/linuxgen)  
+- [Facebook](https://www.facebook.com/mRizwanSalem)  
+- [GitHub](https://github.com/RixwanSaleem)
 
 ## Credits & Authors
 
