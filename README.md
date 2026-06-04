@@ -235,8 +235,9 @@ RestartSec=10
 WantedBy=multi-user.target
 ```
 ## Nginx
-
 nano /etc/nginx/conf.d/monitoring-dashboard.conf
+
+
 server {
     listen 80;
     server_name alfasolution.org; # Replace with your domain or server IP
