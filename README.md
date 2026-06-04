@@ -149,7 +149,7 @@ mkdir -p /opt/panel
 cd /opt/panel
 
 # Clone the repository into 'monitoring-dashboard'
-git clone https://github.com monitoring-dashboard
+git clone https://github.com/RixwanSaleem/AlfaMonitor.git monitoring-dashboard
 cd monitoring-dashboard
 ```
 
