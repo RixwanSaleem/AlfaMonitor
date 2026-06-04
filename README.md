@@ -6,15 +6,15 @@
 
 **A modern Python-based monitoring dashboard** for Linux and Windows servers with live metrics, real-time alerting (Telegram + Discord), and Ansible integration.
 
-## Example Pictures
+## Screenshots
 
 <p align="center">
-  <img src="assets/Dashboard.png" width="49%" alt="Main Dashboard"/>
-  <img src="assets/Alfa-Dashboard.png" width="49%" alt="Alfa Dashboard"/>
+  <img src="assets/Dashboard.png" width="45%" alt="Main Dashboard" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"/>
+  <img src="assets/Alfa-Dashboard.png" width="45%" alt="Alfa Dashboard" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"/>
 </p>
 
 <p align="center">
-  <img src="assets/AdminLogin.png" width="49%" alt="Admin Login"/>
+  <img src="assets/AdminLogin.png" width="45%" alt="Admin Login" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"/>
 </p>
 
 AlfaMonitor is a Python-based monitoring dashboard for Linux and Windows servers. It provides live metrics, alerting, and Ansible integration through a Flask backend and lightweight agent.
