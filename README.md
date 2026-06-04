@@ -9,12 +9,12 @@
 ## Screenshots
 
 <p align="center">
-  <img src="assets/Dashboard.png" width="40%" alt="Main Dashboard" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"/>
-  <img src="assets/Alfa-Dashboard.png" width="40%" alt="Alfa Dashboard" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"/>
+  <img src="assets/Dashboard.png" width="48%" alt="Main Dashboard" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
+  <img src="assets/Alfa-Dashboard.png" width="48%" alt="Alfa Dashboard" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
 </p>
 
 <p align="center">
-  <img src="assets/AdminLogin.png" width="40%" alt="Admin Login" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.1);"/>
+  <img src="assets/AdminLogin.png" width="48%" alt="Admin Login" style="border-radius: 8px; box-shadow: 0 4px 12px rgba(0,0,0,0.15);"/>
 </p>
 
 AlfaMonitor is a Python-based monitoring dashboard for Linux and Windows servers. It provides live metrics, alerting, and Ansible integration through a Flask backend and lightweight agent.
