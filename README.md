@@ -425,7 +425,10 @@ For direct support, open a public tracking issue containing:
 
 If AlfaMonitor helps you manage and monitor your infrastructure easily, consider supporting its development!
 
-[![Support me on Ko-fi](https://shields.io)](https://ko-fi.com)
+<a href="https://ko-fi.com" target="_blank">
+  <img src="https://shields.io" alt="Ko-fi Support"/>
+</a>
+
 
 ## Credits & Authors
 
